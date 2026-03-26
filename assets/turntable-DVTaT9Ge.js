@@ -1,4 +1,4 @@
-import{d as E,e as q,L as D,o as G,n as h,f as F,r as n,i as W}from"./index-DILs9UI0.js";const H=q({name:"Turntable",components:{LayoutComponent:D},setup(){const C=n(!0),M=n({show:!1,message:""}),x=n(null),S=n(null),v=n(!1),s=n([{text:"100萬",color:"#fbbf24",level:1},{text:"10萬",color:"#94a3b8",level:2},{text:"1萬",color:"#d97706",level:3},{text:"銘謝惠顧",color:"#f1f5f9",level:0},{text:"銘謝惠顧",color:"#e2e8f0",level:0},{text:"銘謝惠顧",color:"#cbd5e1",level:0}]),u=n(""),p=n(0),b=n(null),z=n(!1);let w=0,d=0;const B=.988,I=5e-4,j=(t,e)=>{let o=parseInt(t.slice(1,3),16)+e,l=parseInt(t.slice(3,5),16)+e,a=parseInt(t.slice(5,7),16)+e;return o=Math.max(0,Math.min(255,o)),l=Math.max(0,Math.min(255,l)),a=Math.max(0,Math.min(255,a)),`#${o.toString(16).padStart(2,"0")}${l.toString(16).padStart(2,"0")}${a.toString(16).padStart(2,"0")}`},c=()=>{const t=x.value;if(!t)return;const e=t.getContext("2d",{alpha:!0});if(!e)return;const o=document.documentElement.classList.contains("dark"),l=t.width/2,a=t.height/2,r=Math.min(l,a)-20,i=Math.PI*2/s.value.length;e.clearRect(0,0,t.width,t.height),e.save(),e.beginPath(),e.arc(l,a,r+5,0,Math.PI*2),e.shadowBlur=30,e.shadowColor=o?"rgba(96, 165, 250, 0.3)":"rgba(0, 0, 0, 0.1)",e.fillStyle=o?"#0f172a":"#ffffff",e.fill(),e.restore(),s.value.forEach((f,_)=>{const k=w+_*i,$=k+i;e.save(),e.beginPath(),e.moveTo(l,a),e.arc(l,a,r,k,$);const y=e.createRadialGradient(l,a,0,l,a,r);y.addColorStop(0,f.color),y.addColorStop(1,j(f.color,-15)),e.fillStyle=y,e.fill(),e.strokeStyle=o?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.4)",e.lineWidth=1.5,e.stroke(),e.save(),e.translate(l,a),e.rotate(k+i/2),e.textAlign="right",f.level===1?(e.shadowBlur=8,e.shadowColor="#fff",e.fillStyle="#92400e"):e.fillStyle=o?"#f1f5f9":"#334155",e.font=`bold ${Math.max(14,r*.08)}px "Inter", system-ui, sans-serif`,e.fillText(f.text,r-25,6),e.restore(),e.restore()}),e.save(),e.beginPath(),e.arc(l,a,28,0,Math.PI*2);const m=e.createLinearGradient(l-20,a-20,l+20,a+20);m.addColorStop(0,o?"#334155":"#f8fafc"),m.addColorStop(1,o?"#0f172a":"#cbd5e1"),e.fillStyle=m,e.shadowBlur=15,e.shadowColor="rgba(0,0,0,0.4)",e.fill(),e.beginPath(),e.arc(l,a,6,0,Math.PI*2),e.fillStyle="#10b981",e.fill(),e.restore()},L=()=>{v.value||(b.value=null,v.value=!0,d=Math.random()*.45+.35,window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(8),requestAnimationFrame(P))},P=()=>{w+=d,d*=B,window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(1+d*15),c(),d>I?requestAnimationFrame(P):(v.value=!1,d=0,window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(1),R())},R=()=>{const t=Math.PI*2/s.value.length,e=(w%(Math.PI*2)+Math.PI*2)%(Math.PI*2),o=Math.PI*1.5;let l=-1;for(let a=0;a<s.value.length;a++){const r=(e+a*t)%(Math.PI*2),i=(r+t)%(Math.PI*2);if(r<i){if(o>=r&&o<=i){l=a;break}}else if(o>=r||o<=i){l=a;break}}l!==-1&&(b.value=s.value[l],z.value=!0,b.value.level===1&&(W(window.innerWidth/2,window.innerHeight/2,"#fbbf24"),window.threeBg&&typeof window.threeBg.celebrate=="function"&&window.threeBg.celebrate()))},T=()=>{if(!u.value)return;const t=["#f87171","#fb923c","#fbbf24","#34d399","#60a5fa","#818cf8","#a78bfa","#f472b6"],e=t[Math.floor(Math.random()*t.length)];s.value.push({text:u.value,color:e,level:p.value}),u.value="",p.value=0,h(c)},A=t=>{s.value.length<=2||(s.value.splice(t,1),h(c))},O=()=>{s.value=[{text:"阿寶Pay 100萬",color:"#fbbf24",level:1},{text:"阿寶Pay 10萬",color:"#94a3b8",level:2},{text:"阿寶Pay 1萬",color:"#d97706",level:3},{text:"銘謝惠顧",color:"#f1f5f9",level:0},{text:"銘謝惠顧",color:"#e2e8f0",level:0},{text:"銘謝惠顧",color:"#cbd5e1",level:0}],h(c)},g=()=>{const t=x.value,e=S.value;if(!t||!e)return;const o=Math.min(e.clientWidth,500);t.width=o,t.height=o,c()};return G(()=>{g(),window.addEventListener("resize",g),new MutationObserver(()=>{c()}).observe(document.documentElement,{attributes:!0,attributeFilter:["class"]}),h(()=>{fetch(`/Per_OutTaiwan/announcements.json?t=${Date.now()}`).then(e=>e.json()).then(e=>{e.turntable&&(M.value=e.turntable)}).catch(e=>console.error(e))})}),F(()=>{window.removeEventListener("resize",g)}),{canvasRef:x,containerRef:S,isSpinning:v,prizes:s,newItemText:u,newItemLevel:p,result:b,showResultModal:z,isSettingsOpen:C,announcement:M,spin:L,addPrize:T,removePrize:A,resetToDefault:O}},template:`<LayoutComponent title="幸運轉盤">
+import{d as H,e as q,L as D,o as F,n as x,f as W,r as o,i as G}from"./index-DUreqkJU.js";const U=q({name:"Turntable",components:{LayoutComponent:D},setup(){const C=o(!0),S=o({show:!1,message:""}),g=o(null),z=o(null),f=o(!1),i=o(!1),r=o([{text:"100萬",color:"#fbbf24",level:1},{text:"10萬",color:"#94a3b8",level:2},{text:"1萬",color:"#d97706",level:3},{text:"銘謝惠顧",color:"#f1f5f9",level:0},{text:"銘謝惠顧",color:"#e2e8f0",level:0},{text:"銘謝惠顧",color:"#cbd5e1",level:0}]),h=o(""),p=o(0),b=o(null),B=o(!1);let m=0,d=0,c=null;const I=.988,j=5e-4,T=(t,e)=>{let a=parseInt(t.slice(1,3),16)+e,s=parseInt(t.slice(3,5),16)+e,l=parseInt(t.slice(5,7),16)+e;return a=Math.max(0,Math.min(255,a)),s=Math.max(0,Math.min(255,s)),l=Math.max(0,Math.min(255,l)),`#${a.toString(16).padStart(2,"0")}${s.toString(16).padStart(2,"0")}${l.toString(16).padStart(2,"0")}`},u=()=>{const t=g.value;if(!t)return;const e=t.getContext("2d",{alpha:!0});if(!e)return;const a=document.documentElement.classList.contains("dark"),s=t.width/2,l=t.height/2,n=Math.min(s,l)-20,v=Math.PI*2/r.value.length;e.clearRect(0,0,t.width,t.height),e.save(),e.beginPath(),e.arc(s,l,n+5,0,Math.PI*2),e.shadowBlur=30,e.shadowColor=a?"rgba(96, 165, 250, 0.3)":"rgba(0, 0, 0, 0.1)",e.fillStyle=a?"#0f172a":"#ffffff",e.fill(),e.restore(),r.value.forEach((w,$)=>{const y=m+$*v,E=y+v;e.save(),e.beginPath(),e.moveTo(s,l),e.arc(s,l,n,y,E);const M=e.createRadialGradient(s,l,0,s,l,n);M.addColorStop(0,w.color),M.addColorStop(1,T(w.color,-15)),e.fillStyle=M,e.fill(),e.strokeStyle=a?"rgba(255,255,255,0.1)":"rgba(255,255,255,0.4)",e.lineWidth=1.5,e.stroke(),e.save(),e.translate(s,l),e.rotate(y+v/2),e.textAlign="right",w.level===1?(e.shadowBlur=8,e.shadowColor="#fff",e.fillStyle="#92400e"):e.fillStyle=a?"#f1f5f9":"#334155",e.font=`bold ${Math.max(14,n*.08)}px "Inter", system-ui, sans-serif`,e.fillText(w.text,n-25,6),e.restore(),e.restore()}),e.restore()},L=()=>{if(f.value){i.value||(i.value=!0,c&&(clearTimeout(c),c=null));return}b.value=null,f.value=!0,i.value=!1,d=Math.random()*.1+.4,c=window.setTimeout(()=>{f.value&&!i.value&&(i.value=!0)},8e3),window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(8),requestAnimationFrame(P)},P=()=>{m+=d,i.value?d*=I:(d*=.999,d<.2&&(d=.2)),window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(1+d*15),u(),i.value&&d<=j?(f.value=!1,i.value=!1,d=0,c&&(clearTimeout(c),c=null),window.threeBg&&window.threeBg.setSpeed&&window.threeBg.setSpeed(1),R()):requestAnimationFrame(P)},R=()=>{const t=Math.PI*2/r.value.length,e=(m%(Math.PI*2)+Math.PI*2)%(Math.PI*2),a=Math.PI*1.5;let s=-1;for(let l=0;l<r.value.length;l++){const n=(e+l*t)%(Math.PI*2),v=(n+t)%(Math.PI*2);if(n<v){if(a>=n&&a<=v){s=l;break}}else if(a>=n||a<=v){s=l;break}}s!==-1&&(b.value=r.value[s],B.value=!0,b.value.level===1&&(G(window.innerWidth/2,window.innerHeight/2,"#fbbf24"),window.threeBg&&typeof window.threeBg.celebrate=="function"&&window.threeBg.celebrate()))},A=()=>{if(!h.value)return;const t=["#f87171","#fb923c","#fbbf24","#34d399","#60a5fa","#818cf8","#a78bfa","#f472b6"],e=t[Math.floor(Math.random()*t.length)];r.value.push({text:h.value,color:e,level:p.value}),h.value="",p.value=0,x(u)},O=t=>{r.value.length<=2||(r.value.splice(t,1),x(u))},_=()=>{r.value=[{text:"阿寶Pay 100萬",color:"#fbbf24",level:1},{text:"阿寶Pay 10萬",color:"#94a3b8",level:2},{text:"阿寶Pay 1萬",color:"#d97706",level:3},{text:"銘謝惠顧",color:"#f1f5f9",level:0},{text:"銘謝惠顧",color:"#e2e8f0",level:0},{text:"銘謝惠顧",color:"#cbd5e1",level:0}],x(u)},k=()=>{const t=g.value,e=z.value;if(!t||!e)return;const a=Math.min(e.clientWidth,500);t.width=a,t.height=a,u()};return F(()=>{k(),window.addEventListener("resize",k),new MutationObserver(()=>{u()}).observe(document.documentElement,{attributes:!0,attributeFilter:["class"]}),x(()=>{fetch(`/Per_OutTaiwan/announcements.json?t=${Date.now()}`).then(e=>e.json()).then(e=>{e.turntable&&(S.value=e.turntable)}).catch(e=>console.error(e))})}),W(()=>{window.removeEventListener("resize",k)}),{canvasRef:g,containerRef:z,isSpinning:f,isBraking:i,prizes:r,newItemText:h,newItemLevel:p,result:b,showResultModal:B,isSettingsOpen:C,announcement:S,toggleSpin:L,addPrize:A,removePrize:O,resetToDefault:_}},template:`<LayoutComponent title="幸運轉盤">
       <template #bottom-left>
         <!-- 手機版設定切換按鈕 -->
         <button 
@@ -35,22 +35,35 @@ import{d as E,e as q,L as D,o as G,n as h,f as F,r as n,i as W}from"./index-DILs
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <div class="flex flex-col lg:flex-row gap-8 transition-all duration-500" :class="isSettingsOpen ? 'items-start' : 'items-center justify-center min-h-[calc(100vh-200px)]'">
           
           <!-- 左側：轉盤區域 -->
           <div class="flex-1 w-full flex flex-col items-center" ref="containerRef">
-            <div class="turntable-container mb-8 relative">
+            <div class="turntable-container mb-8 relative flex items-center justify-center">
               <div class="pointer"></div>
               <canvas id="turntableCanvas" ref="canvasRef" class="max-w-full h-auto"></canvas>
+              
+              <!-- 中心按鈕 -->
+              <button 
+                @click="toggleSpin"
+                class="absolute z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 border-4 border-white dark:border-slate-800"
+                :class="isSpinning && !isBraking ? 'bg-red-500 hover:bg-red-600 text-white' : (isBraking ? 'bg-slate-400 text-white cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white')"
+                :disabled="isBraking"
+              >
+                <!-- Play Icon -->
+                <svg v-if="!isSpinning" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <!-- Pause/Stop Icon -->
+                <svg v-else-if="!isBraking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 6h12v12H6z" />
+                </svg>
+                <!-- Braking Icon (Spinning) -->
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
-            
-            <button 
-              @click="spin" 
-              :disabled="isSpinning"
-              class="neon-btn px-12 py-4 rounded-full text-slate-900 dark:text-white text-xl md:text-2xl font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-black shadow-lg shadow-black/10 dark:shadow-black/20"
-            >
-              {{ isSpinning ? '旋轉中...' : '開始抽獎' }}
-            </button>
           </div>
   
           <!-- 右側：設定區域 -->
@@ -131,7 +144,7 @@ import{d as E,e as q,L as D,o as G,n as h,f as F,r as n,i as W}from"./index-DILs
                         </span>
                       </div>
                     </div>
-                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 transition-all p-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -170,4 +183,4 @@ import{d as E,e as q,L as D,o as G,n as h,f as F,r as n,i as W}from"./index-DILs
           </button>
         </div>
       </div>
-    </LayoutComponent>`});E(H).mount("#app");
+    </LayoutComponent>`});H(U).mount("#app");
