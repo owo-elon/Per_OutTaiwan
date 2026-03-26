@@ -292,6 +292,25 @@ const Turntable = defineComponent({
     };
   },
   template: `<LayoutComponent title="幸運轉盤">
+      <template #bottom-left>
+        <!-- 手機版設定切換按鈕 -->
+        <button 
+          @click="isSettingsOpen = !isSettingsOpen"
+          class="lg:hidden w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]"
+        >
+          <!-- Glow effect for dark mode -->
+          <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
+          
+          <svg v-if="!isSettingsOpen" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </template>
+
       <div class="max-w-6xl mx-auto px-4 py-8 relative">
         
         <!-- 公告欄 -->
@@ -307,25 +326,6 @@ const Turntable = defineComponent({
                     {{ announcement.message }}
                 </p>
             </div>
-        </div>
-
-        <!-- 手機版設定切換按鈕 -->
-        <div class="fixed bottom-8 left-8 z-40 flex flex-col-reverse items-start gap-4 lg:hidden">
-          <button 
-            @click="isSettingsOpen = !isSettingsOpen"
-            class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-slate-100 dark:bg-slate-900 border-slate-200 dark:border-white/40 text-slate-900 dark:text-white shadow-black/10 dark:shadow-black/40 dark:border-slate-400/40 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]"
-          >
-            <!-- Glow effect for dark mode -->
-            <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
-            
-            <svg v-if="!isSettingsOpen" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
         </div>
 
         <div class="flex flex-col lg:flex-row gap-8 items-start">
@@ -360,8 +360,8 @@ const Turntable = defineComponent({
               class="w-full lg:w-96 glass-card p-6 rounded-3xl border border-white/20 shadow-2xl sticky top-8 z-30"
             >
               <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-slate-800 dark:text-white">轉盤設定</h2>
-                <button @click="isSettingsOpen = false" class="hidden lg:block text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                <h2 class="text-2xl font-bold text-black dark:text-white">轉盤設定</h2>
+                <button @click="isSettingsOpen = false" class="hidden lg:block text-slate-900 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -369,7 +369,7 @@ const Turntable = defineComponent({
               </div>
               
               <div class="mb-6">
-                <label class="block text-sm font-bold text-slate-600 dark:text-slate-400 mb-3 uppercase tracking-wider">新增獎項</label>
+                <label class="block text-sm font-bold text-slate-900 dark:text-slate-400 mb-3 uppercase tracking-wider">新增獎項</label>
                 <div class="flex flex-col gap-3">
                   <input 
                     v-model="newItemText" 
@@ -400,7 +400,7 @@ const Turntable = defineComponent({
   
               <div class="mb-2">
                 <div class="flex justify-between items-center mb-4">
-                  <label class="text-sm font-bold text-slate-700 dark:text-slate-400 uppercase tracking-wider">目前獎項 ({{ prizes.length }})</label>
+                  <label class="text-sm font-bold text-slate-900 dark:text-slate-400 uppercase tracking-wider">目前獎項 ({{ prizes.length }})</label>
                   <button @click="resetToDefault" class="text-xs font-bold text-slate-900 dark:text-slate-100 hover:underline">重置預設</button>
                 </div>
                 <div class="max-h-[40vh] lg:max-h-96 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
@@ -415,7 +415,7 @@ const Turntable = defineComponent({
                     <div class="flex items-center gap-3">
                       <div class="w-5 h-5 rounded-full shadow-inner border border-white/20" :style="{ backgroundColor: prize.color }"></div>
                       <div class="flex flex-col">
-                        <span class="text-sm font-bold" :class="prize.level === 1 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-700 dark:text-slate-200'">{{ prize.text }}</span>
+                        <span class="text-sm font-bold" :class="prize.level === 1 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-200'">{{ prize.text }}</span>
                         <span v-if="prize.level > 0" :class="['text-[10px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md inline-block w-fit mt-0.5', 
                                                                prize.level === 1 ? 'bg-amber-500 text-slate-900 dark:text-white' : 
                                                                prize.level === 2 ? 'bg-slate-400 text-slate-900 dark:text-white' : 
@@ -424,7 +424,7 @@ const Turntable = defineComponent({
                         </span>
                       </div>
                     </div>
-                    <button @click="removePrize(index)" class="text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -439,7 +439,7 @@ const Turntable = defineComponent({
           <button 
             v-if="!isSettingsOpen"
             @click="isSettingsOpen = true"
-            class="hidden lg:flex absolute top-8 right-4 w-12 h-12 glass-card rounded-full items-center justify-center text-slate-400 hover:text-slate-900 dark:hover:text-white border border-white/20 shadow-lg transition-all hover:scale-110"
+            class="hidden lg:flex absolute top-8 right-4 w-12 h-12 glass-card rounded-full items-center justify-center text-slate-900 dark:text-slate-400 hover:text-black dark:hover:text-white border border-white/20 shadow-lg transition-all hover:scale-110"
           >
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -453,7 +453,7 @@ const Turntable = defineComponent({
       <div v-if="showResultModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
         <div class="glass-card max-w-sm w-full p-8 rounded-3xl border border-white/20 text-center animate-in fade-in zoom-in duration-300">
           <div class="text-6xl mb-4">🎉</div>
-          <h3 class="text-2xl font-bold text-slate-800 dark:text-white mb-2">恭喜中獎！</h3>
+          <h3 class="text-2xl font-bold text-black dark:text-white mb-2">恭喜中獎！</h3>
           <div class="text-4xl font-black text-slate-900 dark:text-slate-100 mb-6">{{ result?.text }}</div>
           <button 
             @click="showResultModal = false"

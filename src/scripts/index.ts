@@ -1,17 +1,7 @@
-import { createApp, defineComponent, ref, computed } from 'vue';
-import { LayoutComponent, createParticles } from '../Layout/Layout';
+import { createApp, defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { LayoutComponent } from '../Layout/Layout';
+import { ThreeCarousel, CarouselItem } from './ThreeCarousel';
 import '../../css/index.css';
-
-interface Feature {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  category: 'tool' | 'game' | 'other';
-  link: string;
-  status: 'active' | 'developing';
-  tag?: string;
-}
 
 const Home = defineComponent({
   name: 'Home',
@@ -19,140 +9,183 @@ const Home = defineComponent({
     LayoutComponent
   },
   setup() {
-    const activeCategory = ref<'all' | 'tool' | 'game'>('all');
-    
-    const features = ref<Feature[]>([
+    const carouselContainer = ref<HTMLElement | null>(null);
+    let carousel: ThreeCarousel | null = null;
+    const activeItem = ref<CarouselItem | null>(null);
+    const isDark = ref(localStorage.getItem('darkMode') === 'true');
+    const selectedCategory = ref('all');
+    const isCategoryMenuOpen = ref(false);
+
+    const features: CarouselItem[] = [
       {
         id: 'packing-list',
         title: '打包清單',
         description: '出國旅行必備物品清單，幫您輕鬆整理行李',
         icon: '🧳',
-        category: 'tool',
         link: `${import.meta.env.BASE_URL}src/view/TakeList/TakeList.html`,
-        status: 'active',
-        tag: '🌍 支援多國'
+        category: 'tool'
       },
       {
         id: 'turntable',
         title: '幸運轉盤',
         description: '猶豫不決嗎？讓轉盤幫您做決定！支援自定義獎項',
         icon: '🎡',
-        category: 'game',
         link: `${import.meta.env.BASE_URL}src/view/Turntable/Turntable.html`,
-        status: 'active',
-        tag: '🎰 好運連連'
+        category: 'game'
       },
       {
         id: 'itinerary',
         title: '行程規劃',
-        description: '即將推出',
+        description: '即將推出：智能行程規劃工具，讓您的旅程更完美',
         icon: '✈️',
-        category: 'tool',
         link: '#',
-        status: 'developing',
-        tag: '🚧 開發中'
+        category: 'tool'
       },
       {
         id: 'budget',
         title: '預算計算',
-        description: '即將推出',
+        description: '即將推出：精確的旅行預算管理，掌控每一分錢',
         icon: '💰',
-        category: 'tool',
         link: '#',
-        status: 'developing',
-        tag: '🚧 開發中'
+        category: 'tool'
       }
-    ]);
+    ];
+
+    const categories = [
+      { id: 'all', name: '全部項目', icon: '💠' },
+      { id: 'tool', name: '實用工具', icon: '🛠️' },
+      { id: 'game', name: '趣味遊戲', icon: '🎮' }
+    ];
 
     const filteredFeatures = computed(() => {
-      if (activeCategory.value === 'all') return features.value;
-      return features.value.filter(f => f.category === activeCategory.value);
+      if (selectedCategory.value === 'all') return features;
+      return features.filter(f => f.category === selectedCategory.value);
     });
 
-    const handleFeatureClick = (feature: Feature, event: MouseEvent) => {
-      if (feature.status === 'developing') return;
-      createParticles(event.clientX, event.clientY, '#0f172a');
-      setTimeout(() => {
-        window.location.href = feature.link;
-      }, 300);
-    };
+    onMounted(() => {
+      if (carouselContainer.value) {
+        carousel = new ThreeCarousel(carouselContainer.value, filteredFeatures.value, isDark.value, (item) => {
+          if (item.link !== '#') {
+            window.location.href = item.link;
+          } else {
+            activeItem.value = item;
+            setTimeout(() => {
+              activeItem.value = null;
+            }, 2000);
+          }
+        });
+      }
 
-    const setCategory = (cat: 'all' | 'tool' | 'game') => {
-      activeCategory.value = cat;
+      // Watch for category changes
+      watch(filteredFeatures, (newVal) => {
+        if (carousel) {
+          carousel.setItems(newVal);
+        }
+      });
+
+      // Watch for theme changes on body class
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.attributeName === 'class') {
+            const isDarkMode = document.body.classList.contains('dark');
+            isDark.value = isDarkMode;
+            if (carousel) {
+              carousel.updateTheme(isDarkMode);
+            }
+          }
+        });
+      });
+
+      observer.observe(document.body, { attributes: true });
+
+      onUnmounted(() => {
+        observer.disconnect();
+        if (carousel) {
+          carousel.destroy();
+        }
+      });
+    });
+
+    const selectCategory = (catId: string) => {
+      selectedCategory.value = catId;
+      isCategoryMenuOpen.value = false;
     };
 
     return {
-      activeCategory,
+      carouselContainer,
+      activeItem,
+      features,
+      selectedCategory,
+      isCategoryMenuOpen,
+      categories,
       filteredFeatures,
-      handleFeatureClick,
-      setCategory
+      selectCategory
     };
   },
   template: `
-    <LayoutComponent title="OutTaiwan 功能選單">
-      <!-- 首頁功能列表 -->
-      <div class="max-w-6xl mx-auto px-4 py-12">
-        <div class="text-center mb-16">
-          <h1 class="text-5xl md:text-7xl font-black mb-6 text-black dark:text-white drop-shadow-sm">
-            Elon Tools 😀
-          </h1>
-        </div>
-        
-        <!-- 分類過濾按鈕 -->
-        <div class="flex justify-center mb-16">
-          <div class="glass-card p-1.5 rounded-2xl flex gap-1 border border-white/20 shadow-xl">
-            <button 
-              @click="setCategory('all')"
-              :class="['px-8 py-2.5 rounded-xl transition-all duration-300 font-bold text-xl flex items-center justify-center', 
-                       activeCategory === 'all' ? 'bg-slate-100 text-slate-900 dark:bg-slate-100 dark:text-slate-900 shadow-lg scale-105' : 'text-slate-600 dark:text-slate-300 hover:bg-white/10']"
-              title="全部"
-            >
-              🏠
-            </button>
-            <button 
-              @click="setCategory('tool')"
-              :class="['px-8 py-2.5 rounded-xl transition-all duration-300 font-bold text-xl flex items-center justify-center', 
-                       activeCategory === 'tool' ? 'bg-slate-100 text-slate-900 dark:bg-slate-100 dark:text-slate-900 shadow-lg scale-105' : 'text-slate-600 dark:text-slate-300 hover:bg-white/10']"
-              title="工具"
-            >
-              🛠️
-            </button>
-            <button 
-              @click="setCategory('game')"
-              :class="['px-8 py-2.5 rounded-xl transition-all duration-300 font-bold text-xl flex items-center justify-center', 
-                       activeCategory === 'game' ? 'bg-slate-100 text-slate-900 dark:bg-slate-100 dark:text-slate-900 shadow-lg scale-105' : 'text-slate-600 dark:text-slate-300 hover:bg-white/10']"
-              title="遊戲"
-            >
-              🎮
-            </button>
-          </div>
-        </div>
+    <LayoutComponent title="OutTaiwan 3D 導航">
+      <template #bottom-left>
+        <!-- Category Selector -->
+        <div class="flex flex-col-reverse items-start gap-4">
+          <!-- Toggle Button -->
+          <button @click="isCategoryMenuOpen = !isCategoryMenuOpen" 
+                  class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]">
+            <!-- Glow effect for dark mode -->
+            <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
+            
+            <span v-if="!isCategoryMenuOpen" class="text-2xl relative z-10">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
 
-        <!-- 功能列表 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          <div v-for="feature in filteredFeatures" :key="feature.id"
-               @click="handleFeatureClick(feature, $event)" 
-               :class="['feature-card glass-card p-8 rounded-3xl shadow-lg transition-all duration-500 group border border-white/20 relative overflow-hidden', 
-                        feature.status === 'active' ? 'cursor-pointer hover:shadow-2xl hover:-translate-y-2' : 'opacity-60 cursor-not-allowed']">
-            
-            <!-- 背景裝飾 -->
-            <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:bg-emerald-500/20 transition-colors"></div>
-            
-            <div class="text-7xl mb-6 text-center transform group-hover:scale-110 group-hover:rotate-6 transition-transform duration-500">{{ feature.icon }}</div>
-            <h2 class="text-2xl font-bold text-slate-800 dark:text-white mb-3 text-center group-hover:text-slate-900 dark:group-hover:text-slate-200 transition-colors">{{ feature.title }}</h2>
-            <p class="text-slate-700 dark:text-slate-400 text-center mb-8 leading-relaxed h-12 overflow-hidden">{{ feature.description }}</p>
-            
-            <div class="flex justify-center">
-              <span :class="['inline-flex items-center px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest transition-colors', 
-                            feature.status === 'active' ? 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300 group-hover:bg-slate-200 group-hover:text-slate-900 dark:group-hover:bg-slate-100 dark:group-hover:text-slate-900' : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-500']">
-                {{ feature.status === 'active' ? (feature.tag || '立即使用') : '即將推出' }}
-              </span>
+            <!-- Tooltip -->
+            <span class="absolute left-20 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
+                {{ isCategoryMenuOpen ? '關閉選單' : '類別：' + categories.find(c => c.id === selectedCategory)?.name }}
+            </span>
+          </button>
+
+          <!-- Category Menu -->
+          <transition 
+              enter-active-class="transition duration-300 ease-out"
+              enter-from-class="transform -translate-x-8 opacity-0"
+              enter-to-class="transform translate-x-0 opacity-100"
+              leave-active-class="transition duration-200 ease-in"
+              leave-from-class="transform translate-x-0 opacity-100"
+              leave-to-class="transform -translate-x-8 opacity-0"
+          >
+            <div v-if="isCategoryMenuOpen" 
+                 class="w-48 glass-card p-3 rounded-3xl border border-white/20 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col gap-2">
+              <button v-for="cat in categories" 
+                      :key="cat.id"
+                      @click="selectCategory(cat.id)"
+                      class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
+                      :class="selectedCategory === cat.id ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'">
+                <span class="text-xl">{{ cat.icon }}</span>
+                <span class="font-bold text-sm">{{ cat.name }}</span>
+              </button>
             </div>
-          </div>
+          </transition>
         </div>
+      </template>
+
+      <div class="relative w-full h-[600px] md:h-[700px] overflow-hidden bg-transparent">
+        
+        <!-- Three.js Container -->
+        <div ref="carouselContainer" class="w-full h-full"></div>
+
+        <!-- Developing Toast -->
+        <transition name="fade">
+          <div v-if="activeItem" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#1A1A1A] border border-[#00E5FF] p-6 rounded-lg shadow-[0_0_30px_rgba(0,229,255,0.3)] text-[#00E5FF] font-mono text-center">
+            <div class="text-2xl mb-2">🚧 ACCESS DENIED 🚧</div>
+            <div>{{ activeItem.title }} 正在開發中...</div>
+          </div>
+        </transition>
+
       </div>
     </LayoutComponent>
   `
 });
 
 createApp(Home).mount('#app');
+
+

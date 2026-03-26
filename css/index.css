@@ -1,5 +1,8 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap');
 @import "tailwindcss";
 @source "../index.html";
+
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --font-sans: "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
@@ -358,21 +361,19 @@
   border-radius: 50%;
 }
 
-/* Warning Flash Animation (Breathing Effect) */
+/* Warning Flash Animation (Border & Shadow) */
 @keyframes warning-flash {
   0%, 100% { 
-    transform: scale(1); 
-    background-color: #ef4444; /* bg-red-500 */
-    box-shadow: 0 0 15px rgba(239, 68, 68, 0.5);
+    border-color: rgba(239, 68, 68, 0.3);
+    box-shadow: 0 0 10px rgba(239, 68, 68, 0.2);
   }
   50% { 
-    transform: scale(1.15); 
-    background-color: #dc2626; /* bg-red-600 */
-    box-shadow: 0 0 35px rgba(239, 68, 68, 0.9);
+    border-color: rgba(239, 68, 68, 1);
+    box-shadow: 0 0 25px rgba(239, 68, 68, 0.5);
   }
 }
 .animate-warning-flash {
-  animation: warning-flash 1.2s infinite ease-in-out;
+  animation: warning-flash 1.5s infinite ease-in-out;
 }
 
 /* Page Transitions */
@@ -395,6 +396,40 @@
 @keyframes slide-up {
   from { opacity: 0; transform: translateY(20px) scale(0.8); }
   to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.animate-spin-slow {
+  animation: spin 6s linear infinite;
+}
+
+.font-mono {
+  font-family: "JetBrains Mono", "Courier New", monospace;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-indigo-200 dark:bg-indigo-900/50 rounded-full;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-indigo-300 dark:bg-indigo-800;
 }
 
 [v-cloak] { display: none; }

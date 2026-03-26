@@ -1,6 +1,11 @@
 import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue';
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { RGBShiftShader } from 'three/examples/jsm/shaders/RGBShiftShader.js';
+import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
 
 export function initThreeBackground(isDarkMode = false) {
     const canvas = document.getElementById('three-canvas');
@@ -52,7 +57,7 @@ export function initThreeBackground(isDarkMode = false) {
     // ==========================================
     // --- 3. 背景 C: 幾何網格 ---
     // ==========================================
-    const geoNetGeometry = new THREE.IcosahedronGeometry(80, 2);
+    const geoNetGeometry = new THREE.IcosahedronGeometry(56, 2);
     const geoNetMaterial = new THREE.MeshBasicMaterial({
         color: state.isDark ? 0x00f2ff : 0x044e3a, 
         wireframe: true, 
@@ -80,7 +85,7 @@ export function initThreeBackground(isDarkMode = false) {
     const bubbles = [];
     const resetBubble = (mesh) => {
         mesh.position.set((Math.random() - 0.5) * spreadX, -50 - Math.random() * 50, (Math.random() - 0.5) * 30);
-        const s = Math.random() * (isMobile ? 1.0 : 1.8) + 0.5;
+        const s = Math.random() * (isMobile ? 0.7 : 1.26) + 0.35;
         mesh.scale.set(s, s, s);
         mesh.userData = { speed: Math.random() * 0.06 + 0.02, wobble: Math.random() * Math.PI * 2, popping: false };
         mesh.visible = true;
@@ -180,17 +185,32 @@ export function initThreeBackground(isDarkMode = false) {
             birdRef: bird,
             ufoRef: ufo
         };
-        scene.add(wrapper);
+
         creatures.push(wrapper);
+        scene.add(wrapper);
     }
 
     // ==========================================
-    // --- **開始Render()** ---
+    // --- Post-Processing (Cyberpunk UI Borders) ---
     // ==========================================
-    camera.position.z = 50;
+    const composer = new EffectComposer(renderer);
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+
+    const rgbShiftPass = new ShaderPass(RGBShiftShader);
+    rgbShiftPass.uniforms['amount'].value = 0.0015; // 輕微的 RGB 位移
+    composer.addPass(rgbShiftPass);
+
+    const filmPass = new FilmPass(
+        0.35,   // noise intensity
+        0.025,  // scanline intensity
+        648,    // scanline count
+        false   // grayscale
+    );
+    composer.addPass(filmPass);
+
     const animate = () => {
         requestAnimationFrame(animate);
-
         const now = Date.now();
         const delta = now - lastTime;
         lastTime = now;
@@ -278,13 +298,17 @@ export function initThreeBackground(isDarkMode = false) {
             }
         }
 
-        renderer.render(scene, camera);
+        // 動態調整 RGB Shift 強度，模擬能量脈衝
+        rgbShiftPass.uniforms['amount'].value = 0.0015 + Math.sin(time * 2) * 0.001;
+
+        composer.render();
     };
 
     window.addEventListener('resize', () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
+        composer.setSize(window.innerWidth, window.innerHeight);
     });
 
     animate();
@@ -365,33 +389,59 @@ const LayoutComponent = defineComponent({
         <div class="app-bg"></div>
         <canvas id="three-canvas" class="three-canvas"></canvas>
 
-        <div v-cloak class="relative z-10 min-h-screen py-8 px-4 md:px-8">
-            <!-- Global Announcement Banner -->
+        <!-- Cyberpunk UI Borders -->
+        <div class="pointer-events-none fixed inset-0 z-50 overflow-hidden">
+            <!-- Top Left Asymmetric Border -->
+            <div class="absolute top-0 left-0 w-64 h-64">
+                <svg viewBox="0 0 256 256" class="w-full h-full drop-shadow-[0_0_8px_rgba(0,242,255,0.8)]">
+                    <path d="M 0 64 L 64 0 L 256 0" fill="none" stroke="rgba(0,242,255,0.5)" stroke-width="2" />
+                    <path d="M 0 80 L 80 0 L 256 0" fill="none" class="animate-pulse" stroke="#00f2ff" stroke-width="4" stroke-dasharray="50 200" stroke-dashoffset="0">
+                        <animate attributeName="stroke-dashoffset" values="250;0" dur="2s" repeatCount="indefinite" />
+                    </path>
+                </svg>
+            </div>
+            <!-- Bottom Right Asymmetric Border -->
+            <div class="absolute bottom-0 right-0 w-64 h-64 rotate-180">
+                <svg viewBox="0 0 256 256" class="w-full h-full drop-shadow-[0_0_8px_rgba(0,242,255,0.8)]">
+                    <path d="M 0 64 L 64 0 L 256 0" fill="none" stroke="rgba(0,242,255,0.5)" stroke-width="2" />
+                    <path d="M 0 80 L 80 0 L 256 0" fill="none" class="animate-pulse" stroke="#00f2ff" stroke-width="4" stroke-dasharray="50 200" stroke-dashoffset="0">
+                        <animate attributeName="stroke-dashoffset" values="250;0" dur="2s" repeatCount="indefinite" />
+                    </path>
+                </svg>
+            </div>
+            <!-- Scanline Overlay (CSS fallback if Three.js FilmPass is subtle) -->
+            <div class="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.05)_50%)] bg-[length:100%_4px] opacity-20 dark:opacity-40 pointer-events-none mix-blend-overlay"></div>
+        </div>
+
+        <div v-cloak class="relative z-10 h-screen overflow-hidden py-4 px-4 md:px-8 flex flex-col">
+            <!-- Global Announcement Banner (Overlay) -->
             <div v-if="globalAnnouncement && globalAnnouncement.show" 
-                 class="max-w-5xl mx-auto mb-6 glass-card overflow-hidden flex items-center border-l-4 border-blue-500 animate-fade-in">
-                <div class="px-4 py-3 bg-blue-500/10 text-blue-500">
-                    <span class="text-xl">🌍</span>
+                 class="fixed top-0 left-0 right-0 z-[70] pointer-events-none">
+                <div class="max-w-5xl mx-auto mt-4 glass-card overflow-hidden flex items-center border-l-4 border-blue-500 animate-fade-in pointer-events-auto shadow-2xl">
+                    <div class="px-4 py-3 bg-blue-500/10 text-blue-500">
+                        <span class="text-xl">🌍</span>
+                    </div>
+                    <div class="marquee-container flex-1 py-3">
+                        <p class="marquee-content text-black font-bold text-sm md:text-base">
+                            {{ globalAnnouncement.message }}
+                            <span class="inline-block w-20"></span>
+                            {{ globalAnnouncement.message }}
+                        </p>
+                    </div>
+                    <button @click="globalAnnouncement.show = false" class="px-4 text-slate-900 dark:text-slate-400 hover:text-black dark:hover:text-slate-300 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
                 </div>
-                <div class="marquee-container flex-1 py-3">
-                    <p class="marquee-content text-slate-700 font-bold text-sm md:text-base">
-                        {{ globalAnnouncement.message }}
-                        <span class="inline-block w-20"></span>
-                        {{ globalAnnouncement.message }}
-                    </p>
-                </div>
-                <button @click="globalAnnouncement.show = false" class="px-4 text-slate-400 hover:text-slate-600 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
             </div>
 
             <!-- Collapsible Floating Menu -->
-            <div class="fixed bottom-8 right-8 flex flex-col items-end gap-3 z-[100]">
+            <div class="fixed bottom-4 right-4 flex flex-col items-end gap-3 z-[100]">
                 <!-- Menu Items (Collapsible) -->
                 <div v-if="isMenuOpen" class="flex flex-col gap-3 mb-1 animate-slide-up">
                     <!-- Home Button -->
-                    <button @click="goToHome" 
+                    <button @click="goToHome(); isMenuOpen = false" 
                             class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20">
                         <span class="text-2xl">🏠</span>
                         <span class="absolute right-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
@@ -400,7 +450,7 @@ const LayoutComponent = defineComponent({
                     </button>
 
                     <!-- Back to Top -->
-                    <button @click="scrollToTop" 
+                    <button @click="scrollToTop(); isMenuOpen = false" 
                             class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20">
                         <span class="text-2xl">⬆️</span>
                         <span class="absolute right-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
@@ -409,7 +459,7 @@ const LayoutComponent = defineComponent({
                     </button>
 
                     <!-- Go Back -->
-                    <button @click="goBack" 
+                    <button @click="goBack(); isMenuOpen = false" 
                             class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20">
                         <span class="text-2xl">⬅️</span>
                         <span class="absolute right-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
@@ -418,7 +468,7 @@ const LayoutComponent = defineComponent({
                     </button>
 
                     <!-- Theme Toggle -->
-                    <button @click="toggleDarkMode" 
+                    <button @click="toggleDarkMode(); isMenuOpen = false" 
                             class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20">
                         <span v-if="isDarkMode" class="text-2xl">☀️</span>
                         <span v-else class="text-2xl">🌙</span>
@@ -430,14 +480,9 @@ const LayoutComponent = defineComponent({
 
                 <!-- Main Menu Toggle Button -->
                 <button @click="isMenuOpen = !isMenuOpen" 
-                        :class="[
-                            'w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden',
-                            isDarkMode 
-                                ? 'bg-slate-900 border-slate-400/40 text-slate-300 shadow-[0_0_20px_rgba(148,163,184,0.3)]' 
-                                : 'bg-white border-slate-200 text-slate-900 shadow-slate-200/50'
-                        ]">
+                        class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]">
                     <!-- Glow effect for dark mode -->
-                    <div v-if="isDarkMode" class="absolute inset-0 bg-slate-400/10 animate-pulse"></div>
+                    <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
                     
                     <svg v-if="!isMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
@@ -463,14 +508,19 @@ const LayoutComponent = defineComponent({
                 </div>
             </div>
 
+            <!-- Bottom Left Content Slot (For Category Selector, Weather, etc.) -->
+            <div class="fixed bottom-4 left-4 z-[60] flex flex-col-reverse items-start gap-4">
+                <slot name="bottom-left"></slot>
+            </div>
+
         <!-- Content Area -->
-            <div id="content-area">
+            <div id="content-area" class="flex-1 overflow-y-auto">
                 <slot></slot>
             </div>
         </div>
 
         <!-- Footer -->
-        <footer class="mt-20 pb-24 text-center text-slate-500 dark:text-slate-400 text-sm">
+        <footer v-if="false" class="mt-20 pb-24 text-center text-slate-900 dark:text-slate-400 text-sm">
             <p>© 2026 Elon提醒出國玩記得注意荷包 ✈️</p>
         </footer>
     `,
@@ -686,6 +736,15 @@ const LayoutComponent = defineComponent({
         };
         const handleGlobalClick = (e: MouseEvent) => {
             createParticles(e.clientX, e.clientY, isDarkMode.value ? '#94a3b8' : '#0f172a');
+            
+            // Auto-collapse menus when clicking elsewhere
+            const target = e.target as HTMLElement;
+            if (!target.closest('.fixed')) {
+                isMenuOpen.value = false;
+                // We can't directly close weather menu here as it's in the slot, 
+                // but we can emit or use a shared state if needed.
+                // For now, we'll handle it in the component itself.
+            }
         };
 
         // ==========================================
