@@ -17,12 +17,17 @@ const TakeList = defineComponent({
     const expandedCategories = ref<Record<string, boolean>>({});
     const mustItemsExpanded = ref(false);
     const isHeaderExpanded = ref(!isMobile);
+    const isLeftMenuOpen = ref(false);
     const peekingActive = ref(false);
+    const isAddItemModalOpen = ref(false);
+    const isSearchPanelOpen = ref(false);
+    const isDeleteMode = ref(false);
     const showResetModal = ref(false);
     const showAddItemModal = ref(false);
     const newItemName = ref('');
-    const newItemCategory = ref('🚨 絕對不能忘記');
+    const newItemCategory = ref('🚨 非常重要');
     const packingList = reactive([]);
+    const deletedItemIds = ref<string[]>([]);
     
     // DOM Carousel State
     const carouselOffset = ref(0);
@@ -224,12 +229,23 @@ const TakeList = defineComponent({
       }
       
       // Update active index
-      const step = 1;
-      activeCategoryIndex.value = Math.round(-carouselOffset.value / step);
+      const N = categories.value.length;
+      if (N > 0) {
+        let activeIdx = Math.round(-carouselOffset.value) % N;
+        if (activeIdx < 0) activeIdx += N;
+        activeCategoryIndex.value = activeIdx;
+      }
     };
 
     const rotateTo = (index: number) => {
-      targetOffset.value = -index;
+      const N = categories.value.length;
+      if (N === 0) return;
+      
+      let currentOffset = (index + targetOffset.value) % N;
+      if (currentOffset < 0) currentOffset += N;
+      if (currentOffset > N / 2) currentOffset -= N;
+      
+      targetOffset.value -= currentOffset;
       requestAnimationFrame(updateCarousel);
     };
 
@@ -256,12 +272,6 @@ const TakeList = defineComponent({
       // Inertia & Snapping
       targetOffset.value += velocity.value * 5;
       targetOffset.value = Math.round(targetOffset.value);
-      
-      // Bounds
-      const max = 0;
-      const min = -(categories.value.length - 1);
-      if (targetOffset.value > max) targetOffset.value = max;
-      if (targetOffset.value < min) targetOffset.value = min;
       
       requestAnimationFrame(updateCarousel);
     };
@@ -342,7 +352,13 @@ const TakeList = defineComponent({
     });
 
     const getCategoryStyle = (index: number) => {
-      const offset = index + carouselOffset.value;
+      const N = categories.value.length;
+      if (N === 0) return {};
+
+      let offset = (index + carouselOffset.value) % N;
+      if (offset < 0) offset += N;
+      if (offset > N / 2) offset -= N;
+
       const absOffset = Math.abs(offset);
       
       // Carousel parameters
@@ -391,16 +407,25 @@ const TakeList = defineComponent({
 
     const getStorageKey = () => `travel_packing_${selectedCountry.value}_${selectedGender.value}`;
     const getCustomStorageKey = () => `travel_packing_custom_${selectedCountry.value}_${selectedGender.value}`;
+    const getDeletedStorageKey = () => `travel_packing_deleted_${selectedCountry.value}_${selectedGender.value}`;
 
     const saveCustomItems = () => {
       const customItems = packingList.filter(item => item.isCustom);
       localStorage.setItem(getCustomStorageKey(), JSON.stringify(customItems));
     };
 
+    const saveDeletedItems = () => {
+      if (deletedItemIds.value.length > 0) {
+        localStorage.setItem(getDeletedStorageKey(), JSON.stringify(deletedItemIds.value));
+      } else {
+        localStorage.removeItem(getDeletedStorageKey());
+      }
+    };
+
     const addCustomItem = () => {
       if (!newItemName.value.trim()) return;
       
-      const isMust = newItemCategory.value === '🚨 絕對不能忘記';
+      const isMust = newItemCategory.value === '🚨 非常重要';
       const newItem = {
         id: `custom_${Date.now()}`,
         name: newItemName.value.trim(),
@@ -423,11 +448,17 @@ const TakeList = defineComponent({
       }
     };
 
-    const removeCustomItem = (id) => {
+    const removeItem = (id) => {
       const index = packingList.findIndex(item => item.id === id);
       if (index > -1) {
+        const item = packingList[index];
         packingList.splice(index, 1);
-        saveCustomItems();
+        if (item.isCustom) {
+          saveCustomItems();
+        } else {
+          deletedItemIds.value.push(id);
+          saveDeletedItems();
+        }
         saveState();
       }
     };
@@ -435,9 +466,24 @@ const TakeList = defineComponent({
     const initializeList = () => {
       const list = [];
       
+      // Restore deleted items
+      const deletedSaved = localStorage.getItem(getDeletedStorageKey());
+      if (deletedSaved) {
+        try {
+          deletedItemIds.value = JSON.parse(deletedSaved);
+        } catch (e) {
+          console.error('Failed to parse deleted items', e);
+          deletedItemIds.value = [];
+        }
+      } else {
+        deletedItemIds.value = [];
+      }
+
       // Add Must items
       defaultItems.must.forEach(item => {
-        list.push({ ...item, isMust: true, category: '🚨 絕對不能忘記' });
+        if (!deletedItemIds.value.includes(item.id)) {
+          list.push({ ...item, isMust: true, category: '🚨 絕對不能忘記' });
+        }
       });
 
       // Add Category items
@@ -448,7 +494,9 @@ const TakeList = defineComponent({
           // Filter by country
           if ('country' in item && item.country !== selectedCountry.value) return;
           
-          list.push({ ...item, isMust: false, category: cat.name });
+          if (!deletedItemIds.value.includes(item.id)) {
+            list.push({ ...item, isMust: false, category: cat.name });
+          }
         });
       });
 
@@ -484,6 +532,11 @@ const TakeList = defineComponent({
     };
 
     const toggleItem = (item, event) => {
+      if (isDeleteMode.value) {
+        removeItem(item.id);
+        return;
+      }
+      
       item.checked = !item.checked;
       
       if (packedCount.value === totalCount.value && totalCount.value > 0) {
@@ -546,24 +599,21 @@ const TakeList = defineComponent({
 
     const isWeatherMenuOpen = ref(false);
 
-    // Close weather menu when clicking outside
+    // Close menus when clicking outside
+    const closeMenus = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (!target.closest('.left-menu-container')) {
+        isWeatherMenuOpen.value = false;
+        isLeftMenuOpen.value = false;
+      }
+    };
+
     onMounted(() => {
-      window.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest('.weather-container')) {
-          isWeatherMenuOpen.value = false;
-        }
-      });
+      window.addEventListener('click', closeMenus);
     });
 
-    // Close weather menu when clicking outside
-    onMounted(() => {
-      window.addEventListener('click', (e) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest('.weather-container')) {
-          isWeatherMenuOpen.value = false;
-        }
-      });
+    onUnmounted(() => {
+      window.removeEventListener('click', closeMenus);
     });
     const selectedWeatherCity = ref(localStorage.getItem('weatherCity') || 'Taipei');
     const weatherData = ref<any>(null);
@@ -666,6 +716,9 @@ const TakeList = defineComponent({
       announcementConfig,
       currentCountryAnnouncement,
       isHeaderExpanded,
+      isLeftMenuOpen,
+      isSearchPanelOpen,
+      isDeleteMode,
       peekingActive,
       showResetModal,
       showAddItemModal,
@@ -673,7 +726,7 @@ const TakeList = defineComponent({
       newItemCategory,
       defaultItems,
       addCustomItem,
-      removeCustomItem,
+      removeItem,
       isWeatherMenuOpen,
       selectedWeatherCity,
       weatherData,
@@ -717,25 +770,41 @@ const TakeList = defineComponent({
         </div>
 
         <template #bottom-left>
-            <div class="weather-container relative">
-                <!-- Weather Toggle Button -->
-                <button @click.stop="isWeatherMenuOpen = !isWeatherMenuOpen" 
-                        class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]">
-                    <!-- Glow effect for dark mode -->
+            <div class="relative flex flex-col-reverse items-start gap-4 left-menu-container" v-if="currentStep === 3">
+                <!-- Left Menu Toggle Button -->
+                <button @click.stop="isLeftMenuOpen = !isLeftMenuOpen" 
+                        class="w-16 h-16 rounded-2xl shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]">
                     <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
-                    
-                    <svg v-if="!isWeatherMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg v-if="!isLeftMenuOpen" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
                     </svg>
-                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
-
-                    <!-- Tooltip -->
-                    <span class="absolute left-20 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
-                        {{ isWeatherMenuOpen ? '關閉天氣' : '目的地天氣' }}
-                    </span>
                 </button>
+
+                <!-- Menu Items -->
+                <div v-if="isLeftMenuOpen" class="flex flex-col gap-3 mb-2 animate-fade-in items-start">
+                    <!-- Search Toggle Button -->
+                    <button @click.stop="isSearchPanelOpen = !isSearchPanelOpen; isWeatherMenuOpen = false; isLeftMenuOpen = false" 
+                            class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20 bg-indigo-600 dark:bg-indigo-500 text-white">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                        </svg>
+                        <span class="absolute left-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
+                            搜尋物品
+                        </span>
+                    </button>
+
+                    <!-- Weather Toggle Button -->
+                    <button @click.stop="isWeatherMenuOpen = !isWeatherMenuOpen; isSearchPanelOpen = false; isLeftMenuOpen = false" 
+                            class="w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl group border border-white/20">
+                        <span class="text-2xl">⛅</span>
+                        <span class="absolute left-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
+                            目的地天氣
+                        </span>
+                    </button>
+                </div>
 
                 <!-- Weather Panel -->
                 <transition 
@@ -747,10 +816,15 @@ const TakeList = defineComponent({
                     leave-to-class="transform -translate-x-8 opacity-0"
                 >
                     <div v-if="isWeatherMenuOpen" 
-                         class="w-72 glass-card p-6 rounded-3xl border border-white/20 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl">
-                        <h3 class="text-xl font-bold text-black dark:text-white mb-4 flex items-center gap-2">
-                            <span>🌍</span> 目的地天氣
-                        </h3>
+                         class="absolute bottom-20 left-0 w-72 glass-card p-6 rounded-3xl border border-white/20 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl z-[70]">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-xl font-bold text-black dark:text-white flex items-center gap-2">
+                                <span>🌍</span> 目的地天氣
+                            </h3>
+                            <button @click="isWeatherMenuOpen = false" class="text-slate-400 hover:text-slate-600 dark:hover:text-white">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                            </button>
+                        </div>
                         
                         <div class="mb-4">
                             <select @change="selectWeatherCity" :value="selectedWeatherCity"
@@ -811,9 +885,9 @@ const TakeList = defineComponent({
         </div>
 
         <!-- Step 3: Packing List -->
-        <div v-if="currentStep === 3" class="max-w-5xl mx-auto h-[calc(100vh-100px)] overflow-y-auto overflow-x-hidden custom-scrollbar pt-2 pb-8 px-4 md:px-0 scroll-smooth">
+        <div v-if="currentStep === 3" class="max-w-5xl mx-auto h-full flex flex-col overflow-hidden pt-2 pb-8 px-4 md:px-0">
             <!-- Header & Progress -->
-            <div class="bg-gradient-to-br from-white/95 to-indigo-50/95 dark:from-slate-900/95 dark:to-indigo-950/95 backdrop-blur-2xl p-6 md:p-8 rounded-[2.5rem] shadow-[0_10px_40px_-10px_rgba(99,102,241,0.3)] dark:shadow-[0_10px_40px_-10px_rgba(99,102,241,0.4)] mb-4 z-50 border-2 transition-all duration-500 overflow-visible"
+            <div class="bg-gradient-to-br from-white/95 to-indigo-50/95 dark:from-slate-900/95 dark:to-indigo-950/95 backdrop-blur-2xl p-6 md:p-8 rounded-[2.5rem] shadow-[0_10px_40px_-10px_rgba(99,102,241,0.3)] dark:shadow-[0_10px_40px_-10px_rgba(99,102,241,0.4)] mb-4 z-50 border-2 transition-all duration-500 overflow-visible shrink-0"
                  :class="[
                     mustItems.some(i => !i.checked) 
                     ? 'border-red-500 animate-warning-flash' 
@@ -886,7 +960,6 @@ const TakeList = defineComponent({
                          :class="{ 'border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)]': mustItems.some(i => !i.checked) }">
                         <div @click="mustItemsExpanded = !mustItemsExpanded" class="flex items-center gap-3 cursor-pointer select-none group/must">
                             <span class="text-xl">🚨</span>
-                            <h2 class="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">絕對不能忘記</h2>
                             <span class="ml-auto text-xs font-bold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-2 py-1 rounded-lg">
                                 {{ mustItems.filter(i => i.checked).length }} / {{ mustItems.length }}
                             </span>
@@ -898,15 +971,28 @@ const TakeList = defineComponent({
                         <div v-show="mustItemsExpanded" class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 animate-in fade-in slide-in-from-top-2 duration-300">
                             <div v-for="item in mustItems" :key="item.id" 
                                  @click="toggleItem(item, $event)"
-                                 class="flex items-center p-3 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-red-100 dark:border-red-900/30 cursor-pointer transition-all hover:scale-[1.02] active:scale-95"
-                                 :class="{ 'opacity-50 grayscale': item.checked }">
-                                <div class="w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all"
-                                     :class="item.checked ? 'bg-emerald-500 border-emerald-500' : 'border-red-400'">
-                                    <svg v-if="item.checked" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
+                                 class="flex items-center p-3 rounded-2xl bg-white/80 dark:bg-slate-800/80 border border-red-100 dark:border-red-900/30 cursor-pointer transition-all hover:scale-[1.02] active:scale-95 group"
+                                 :class="[
+                                    item.checked && !isDeleteMode ? 'opacity-50 grayscale' : '',
+                                    isDeleteMode ? 'hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-900/20' : ''
+                                 ]">
+                                <div class="w-6 h-6 shrink-0 rounded-lg border-2 flex items-center justify-center transition-all"
+                                     :class="[
+                                        item.checked && !isDeleteMode ? 'bg-emerald-500 border-emerald-500' : 'border-red-400',
+                                        isDeleteMode ? 'border-red-500 bg-red-50 dark:border-red-500 dark:bg-red-900/30' : ''
+                                     ]">
+                                    <svg v-if="item.checked && !isDeleteMode" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" viewBox="0 0 20 20" fill="currentColor">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                                     </svg>
+                                    <svg v-if="isDeleteMode" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
                                 </div>
-                                <span class="ml-3 font-bold text-sm text-slate-900 dark:text-slate-200 truncate" :class="{ 'line-through': item.checked }">
+                                <span class="ml-3 font-bold text-sm text-slate-900 dark:text-slate-200 truncate" 
+                                      :class="[
+                                        item.checked && !isDeleteMode ? 'line-through' : '',
+                                        isDeleteMode ? 'group-hover:text-red-600 dark:group-hover:text-red-400' : ''
+                                      ]">
                                     {{ item.name }}
                                 </span>
                             </div>
@@ -923,39 +1009,56 @@ const TakeList = defineComponent({
                 <p class="text-slate-900 dark:text-slate-400">請嘗試其他關鍵字</p>
             </div>
 
-            <!-- Search & Filter -->
-            <div class="sticky top-0 mb-4 px-4 md:px-2 py-4 z-[60] bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl rounded-3xl border border-indigo-100/50 dark:border-indigo-900/30 shadow-sm">
-                <div class="flex flex-col sm:flex-row gap-4 w-full">
-                    <!-- Dropdown -->
-                    <select v-model="selectedCategoryFilter" class="py-4 px-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-black dark:text-white font-bold appearance-none cursor-pointer">
-                        <option value="All">全部類別</option>
-                        <option v-for="cat in categories" :key="cat.name" :value="cat.name">{{ cat.icon }} {{ cat.name }}</option>
-                    </select>
+            <!-- Search & Filter Panel (Slide Down) -->
+            <transition 
+                enter-active-class="transition duration-500 ease-out"
+                enter-from-class="transform -translate-y-full opacity-0"
+                enter-to-class="transform translate-y-0 opacity-100"
+                leave-active-class="transition duration-300 ease-in"
+                leave-from-class="transform translate-y-0 opacity-100"
+                leave-to-class="transform -translate-y-full opacity-0"
+            >
+                <div v-if="isSearchPanelOpen && currentStep === 3" class="fixed top-0 left-0 right-0 z-[100] p-4 pointer-events-none">
+                    <div class="max-w-5xl mx-auto bg-white/90 dark:bg-slate-900/90 backdrop-blur-2xl p-6 rounded-b-[2.5rem] rounded-t-2xl shadow-2xl border-x-2 border-b-2 border-indigo-500/20 pointer-events-auto">
+                        <div class="flex flex-col sm:flex-row gap-4 w-full">
+                            <!-- Dropdown -->
+                            <select v-model="selectedCategoryFilter" @change="isSearchPanelOpen = false" class="py-4 px-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-black dark:text-white font-bold appearance-none cursor-pointer">
+                                <option value="All">全部類別</option>
+                                <option v-for="cat in categories" :key="cat.name" :value="cat.name">{{ cat.icon }} {{ cat.name }}</option>
+                            </select>
 
-                    <!-- Search -->
-                    <div class="relative flex-1">
-                        <input v-model="searchQuery" type="text" placeholder="搜尋物品..." 
-                               class="w-full py-4 pl-12 pr-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-black dark:text-white font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-4.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                        </svg>
+                            <!-- Search -->
+                            <div class="relative flex-1">
+                                <input v-model="searchQuery" type="text" placeholder="搜尋物品..." 
+                                       class="w-full py-4 pl-12 pr-4 rounded-2xl bg-white/60 dark:bg-slate-800/60 border border-indigo-100 dark:border-indigo-800/50 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-black dark:text-white font-bold">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 absolute left-4 top-4.5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <button @click="isSearchPanelOpen = false" class="mt-4 w-full py-2 text-slate-400 hover:text-indigo-500 transition-colors flex items-center justify-center gap-2 text-sm font-bold uppercase tracking-widest">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                            </svg>
+                            收起搜尋
+                        </button>
                     </div>
                 </div>
-            </div>
+            </transition>
 
             <!-- 3D Carousel for Categories -->
-            <div class="relative min-h-[80vh] mb-20 w-full perspective-2000 z-10" 
+            <div class="relative flex-1 min-h-0 mb-12 w-full perspective-2000 z-10" 
                  @mousedown="onMouseDown" 
                  @touchstart="onTouchStart">
-                <div class="absolute inset-0 flex items-start justify-center pt-4 preserve-3d transition-transform duration-75">
+                <div class="absolute inset-0 flex items-start justify-center pt-4 pb-4 preserve-3d transition-transform duration-75">
                     <div v-for="(category, index) in categories" :key="category.name" 
-                         class="absolute w-[90%] md:w-[450px] transition-all duration-300 ease-out"
+                         class="absolute w-[90%] md:w-[450px] h-full transition-all duration-300 ease-out"
                          :style="getCategoryStyle(index)">
                         
-                        <div class="glass-card rounded-3xl md:rounded-[2.5rem] shadow-2xl border-2 overflow-hidden"
+                        <div class="glass-card rounded-3xl md:rounded-[2.5rem] shadow-2xl border-2 overflow-hidden h-full flex flex-col"
                              :class="category.items.length > 0 && category.items.every(i => i.checked) ? 'border-emerald-400/50 dark:border-emerald-500/50 bg-emerald-50/30 dark:bg-emerald-900/10' : 'border-white/20 dark:border-white/5'">
                             
-                            <div class="p-4 md:p-6 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20 border-b border-white/10">
+                            <div class="p-4 md:p-6 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/20 border-b border-white/10 shrink-0">
                                 <div class="flex items-center gap-4">
                                     <div class="w-12 h-12 md:w-14 md:h-14 bg-white dark:bg-slate-800 rounded-2xl flex items-center justify-center text-2xl shadow-sm border border-slate-100 dark:border-slate-700">
                                         {{ category.icon }}
@@ -967,32 +1070,50 @@ const TakeList = defineComponent({
                                         </p>
                                     </div>
                                 </div>
-                                <div v-if="category.items.length > 0 && category.items.every(i => i.checked)" 
-                                     class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 animate-in zoom-in duration-500">
-                                    <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                <div class="flex items-center gap-2">
+                                    <button @click.stop="isDeleteMode = !isDeleteMode" 
+                                            class="w-10 h-10 rounded-full flex items-center justify-center transition-all hover:scale-110 active:scale-95 border"
+                                            :class="isDeleteMode ? 'bg-red-500 text-white border-red-500 shadow-lg shadow-red-500/30' : 'bg-white/50 dark:bg-slate-800/50 text-slate-400 hover:text-red-500 border-transparent hover:border-red-200 dark:hover:border-red-900'">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                    <div v-if="category.items.length > 0 && category.items.every(i => i.checked)" 
+                                         class="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/20 animate-in zoom-in duration-500">
+                                        <svg class="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div class="px-6 pb-6 md:px-8 md:pb-8 pt-4">
+                            <div class="px-6 pb-6 md:px-8 md:pb-8 pt-4 flex-1 overflow-y-auto custom-scrollbar">
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div v-for="item in category.items" :key="item.id" 
                                          v-show="!searchQuery || item.name.toLowerCase().includes(searchQuery.toLowerCase())"
                                          @click="toggleItem(item, $event)"
-                                         class="flex items-center p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all group border-2 border-transparent"
-                                         :class="{ 'bg-slate-50/50 dark:bg-slate-800/30 border-emerald-500/10': item.checked }">
-                                        <div class="w-8 h-8 rounded-xl border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all group-hover:border-slate-900 dark:group-hover:border-slate-400" 
-                                             :class="{ 'bg-slate-900 border-slate-900 dark:bg-slate-100 dark:border-slate-100': item.checked }">
-                                            <svg v-if="item.checked" xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white dark:text-slate-900" viewBox="0 0 20 20" fill="currentColor">
+                                         class="flex items-center p-4 md:p-5 rounded-3xl hover:bg-slate-50 dark:hover:bg-slate-800/50 cursor-pointer transition-all group border-2 border-transparent"
+                                         :class="[
+                                            item.checked && !isDeleteMode ? 'bg-slate-50/50 dark:bg-slate-800/30 border-emerald-500/10' : '',
+                                            isDeleteMode ? 'hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-900/20' : ''
+                                         ]">
+                                        <div class="w-6 h-6 md:w-8 md:h-8 shrink-0 rounded-lg md:rounded-xl border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center transition-all group-hover:border-slate-900 dark:group-hover:border-slate-400" 
+                                             :class="[
+                                                item.checked && !isDeleteMode ? 'bg-slate-900 border-slate-900 dark:bg-slate-100 dark:border-slate-100' : '',
+                                                isDeleteMode ? 'border-red-500 bg-red-50 dark:border-red-500 dark:bg-red-900/30 !group-hover:border-red-600' : ''
+                                             ]">
+                                            <svg v-if="item.checked && !isDeleteMode" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-6 md:w-6 text-white dark:text-slate-900" viewBox="0 0 20 20" fill="currentColor">
                                                 <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" />
                                             </svg>
+                                            <svg v-if="isDeleteMode" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 md:h-5 md:w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
                                         </div>
-                                        <span class="ml-4 text-slate-900 dark:text-slate-200 font-bold text-lg transition-all truncate" 
-                                              :class="{ 'line-through opacity-60 translate-x-1 text-slate-500': item.checked }">
+                                        <span class="ml-3 md:ml-4 text-slate-900 dark:text-slate-200 font-bold text-base md:text-lg transition-all truncate" 
+                                              :class="[
+                                                item.checked && !isDeleteMode ? 'line-through opacity-60 translate-x-1 text-slate-500' : '',
+                                                isDeleteMode ? 'group-hover:text-red-600 dark:group-hover:text-red-400' : ''
+                                              ]">
                                             {{ item.name }}
                                         </span>
-                                        <button v-if="item.isCustom" @click.stop="removeCustomItem(item.id)" class="ml-auto text-slate-900 dark:text-slate-300 hover:text-red-500 transition-all p-2 -mr-2 hover:scale-125">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
                                     </div>
                                 </div>
                             </div>

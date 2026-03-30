@@ -5,291 +5,583 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { RGBShiftShader } from 'three/examples/jsm/shaders/RGBShiftShader.js';
-import { FilmPass } from 'three/examples/jsm/postprocessing/FilmPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 
 export function initThreeBackground(isDarkMode = false) {
     const canvas = document.getElementById('three-canvas');
     if (!canvas) return;
-
-    // 建立一個內部狀態供 animate 讀取，避免重複初始化
-    const state = { isDark: isDarkMode, speedMultiplier: 1, timeMs: Date.now() };
+ 
+    // ── Theme Palette ──────────────────────────────────────────────────────────
+    const THEMES = {
+        dark: {
+            bg:             0x000000,
+            gridPrimary:    0x00f2ff,   // cyan
+            gridSecondary:  0x0066ff,   // electric blue
+            nodePulse:      0x00f2ff,
+            scanLine:       0x00f2ff,
+            particle:       0x00ffaa,
+            ripple:         0x00f2ff,
+            star:           0xffffff,
+            creature:       0xffb703,
+            creatureWing:   0xfb8500,
+            ufo:            0x8ecae6,
+            bubble:         0x00f2ff,
+        },
+        light: {
+            bg:             0xf0f4f8,
+            gridPrimary:    0x044e3a,   // deep teal
+            gridSecondary:  0x0a7c5c,   // mid teal
+            nodePulse:      0x044e3a,
+            scanLine:       0x0a7c5c,
+            particle:       0x044e3a,
+            ripple:         0x0a7c5c,
+            star:           0x94a3b8,
+            creature:       0x8b5e00,
+            creatureWing:   0xb07800,
+            ufo:            0x2a7090,
+            bubble:         0x044e3a,
+        }
+    };
+ 
+    const T = () => (state.isDark ? THEMES.dark : THEMES.light);
+ 
+    // ── State ──────────────────────────────────────────────────────────────────
+    const state = {
+        isDark: isDarkMode,
+        speedMultiplier: 1,
+        timeMs: Date.now()
+    };
     let lastTime = Date.now();
-
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+ 
+    // ── Renderer ───────────────────────────────────────────────────────────────
+    const scene    = new THREE.Scene();
+    const camera   = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.z = 55;
+ 
     const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-
-    // --- 響應式配置 ---
-    const isMobile = window.innerWidth < 768;
-    const MAX_BUBBLES = isMobile ? 80 : 180;
-    const spreadX = isMobile ? 40 : 80;
-
-    // ==========================================
-    // --- 1. 背景 A: 燈光系統 ---
-    // ==========================================
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-    scene.add(ambientLight);
-    const pointLight = new THREE.PointLight(0xffffff, 1.2);
-    pointLight.position.set(20, 30, 20);
-    scene.add(pointLight);
-
-    // ==========================================
-    // --- 2. 背景 B: 星空 ---
-    // ==========================================
-    const starCount = 6000;
-    const starGeometry = new THREE.BufferGeometry();
-    const starPositions = new Float32Array(starCount * 3);
+ 
+    const isMobile = () => window.innerWidth < 768;
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 1. STAR FIELD
+    // ══════════════════════════════════════════════════════════════════════════
+    const starCount = 5000;
+    const starGeo   = new THREE.BufferGeometry();
+    const starPos   = new Float32Array(starCount * 3);
     for (let i = 0; i < starCount; i++) {
-        starPositions[i * 3] = (Math.random() - 0.5) * 300;
-        starPositions[i * 3 + 1] = (Math.random() - 0.5) * 300;
-        starPositions[i * 3 + 2] = -50 - Math.random() * 200;
+        starPos[i * 3]     = (Math.random() - 0.5) * 300;
+        starPos[i * 3 + 1] = (Math.random() - 0.5) * 300;
+        starPos[i * 3 + 2] = -60 - Math.random() * 200;
     }
-    starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
-    const starMaterial = new THREE.PointsMaterial({
-        size: 0.18, color: 0xffffff, transparent: true, opacity: 0.9,
-        blending: THREE.AdditiveBlending, depthWrite: false, sizeAttenuation: true
+    starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+    const starMat = new THREE.PointsMaterial({
+        size: 0.18, color: 0xffffff, transparent: true,
+        opacity: 0.85, blending: THREE.AdditiveBlending,
+        depthWrite: false, sizeAttenuation: true
     });
-    const stars = new THREE.Points(starGeometry, starMaterial);
+    const stars = new THREE.Points(starGeo, starMat);
+    stars.visible = state.isDark;
     scene.add(stars);
-
-    // ==========================================
-    // --- 3. 背景 C: 幾何網格 ---
-    // ==========================================
-    const geoNetGeometry = new THREE.IcosahedronGeometry(56, 2);
-    const geoNetMaterial = new THREE.MeshBasicMaterial({
-        color: state.isDark ? 0x00f2ff : 0x044e3a, 
-        wireframe: true, 
-        transparent: true, 
-        opacity: 0.2,
-        side: THREE.DoubleSide // 關鍵：確保相機在內部也看得到網格
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 2. OUTER CAGE — single low-detail ghost ring, barely visible
+    // ══════════════════════════════════════════════════════════════════════════
+    const cageMat = new THREE.MeshBasicMaterial({
+        color: THEMES.dark.gridPrimary,
+        wireframe: true, transparent: true, opacity: 0.04,   // ← was 0.08
+        side: THREE.DoubleSide
     });
-    const geoNet = new THREE.Mesh(geoNetGeometry, geoNetMaterial);
-    scene.add(geoNet);
-
-    // ==========================================
-    // --- 4. 背景 D: 泡泡 ---
-    // ==========================================
-    const bubbleGeometry = new THREE.SphereGeometry(1, 24, 24);
-    const bubbleMaterial = new THREE.MeshPhysicalMaterial({
-        color: state.isDark ? 0x00f2ff : 0x044e3a, 
-        transmission: 0.5, 
-        opacity: 0.8, 
-        transparent: true,
-        roughness: 0.1, 
-        thickness: 2, 
-        depthWrite: false, // 關鍵：防止透明泡泡互相遮擋消失
+    // detail: 1 → 80 triangles only, much sparser than detail: 2 (320 tri)
+    const cage = new THREE.Mesh(new THREE.IcosahedronGeometry(58, 1), cageMat);
+    scene.add(cage);
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 3. MAIN TECH GRID — ONE primary + ONE ghost layer (removed inner sphere)
+    //
+    //  Before: 3 layers (r32d2 + r20d1 + r44d1) → too many overlapping edges
+    //  After:  2 layers (r32d1 + r46d1)
+    //    - Primary  r32 detail 1 → 80 clean triangles, clearly readable
+    //    - Ghost    r46 detail 1 → very low opacity, gives depth without clutter
+    // ══════════════════════════════════════════════════════════════════════════
+    const gridLayers = [];
+ 
+    const GRID_DEFS = [
+        // Main hero sphere — detail 1 keeps edges wide & legible
+        { radius: 32, detail: 1, opacityDark: 0.38, opacityLight: 0.42,
+          rotSpeedY:  0.0005, rotSpeedX: 0.00015, primary: true  },
+        // Ghost halo — just enough to imply depth
+        { radius: 46, detail: 1, opacityDark: 0.07, opacityLight: 0.09,
+          rotSpeedY: -0.0003, rotSpeedX: 0.00020, primary: false },
+    ];
+ 
+    GRID_DEFS.forEach(def => {
+        const mat = new THREE.MeshBasicMaterial({
+            color: def.primary ? THEMES.dark.gridPrimary : THEMES.dark.gridSecondary,
+            wireframe: true, transparent: true,
+            opacity: state.isDark ? def.opacityDark : def.opacityLight,
+            side: THREE.DoubleSide
+        });
+        const mesh = new THREE.Mesh(new THREE.IcosahedronGeometry(def.radius, def.detail), mat);
+        scene.add(mesh);
+        gridLayers.push({ mesh, mat, def });
     });
-
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 4. SCAN LINE — a glowing plane sweeping through the sphere
+    // ══════════════════════════════════════════════════════════════════════════
+    const scanGeo = new THREE.PlaneGeometry(140, 0.3);
+    const scanMat = new THREE.MeshBasicMaterial({
+        color: THEMES.dark.scanLine,
+        transparent: true, opacity: 0.0,
+        side: THREE.DoubleSide, depthWrite: false,
+        blending: THREE.AdditiveBlending
+    });
+    const scanLine = new THREE.Mesh(scanGeo, scanMat);
+    scanLine.rotation.x = Math.PI / 2;
+    scene.add(scanLine);
+ 
+    // Glow ring accompanying the scan line
+    const scanRingGeo = new THREE.TorusGeometry(52, 0.12, 8, 80);
+    const scanRingMat = new THREE.MeshBasicMaterial({
+        color: THEMES.dark.scanLine,
+        transparent: true, opacity: 0.0,
+        blending: THREE.AdditiveBlending
+    });
+    const scanRing = new THREE.Mesh(scanRingGeo, scanRingMat);
+    scene.add(scanRing);
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 5. NODE VERTICES — 12 anchor points only (base icosahedron, detail 0)
+    //    Before: detail 2 → ~42 unique verts → too many dots cluttering the mesh
+    //    After:  detail 0 → exactly 12 verts  → clean, intentional accents
+    // ══════════════════════════════════════════════════════════════════════════
+    const buildNodeSystem = () => {
+        // detail 0 = raw icosahedron: 12 vertices, perfectly spaced
+        const srcGeo  = new THREE.IcosahedronGeometry(32, 0);
+        const posAttr = srcGeo.getAttribute('position');
+        const unique  = new Map();
+ 
+        for (let i = 0; i < posAttr.count; i++) {
+            const key = `${posAttr.getX(i).toFixed(1)},${posAttr.getY(i).toFixed(1)},${posAttr.getZ(i).toFixed(1)}`;
+            if (!unique.has(key))
+                unique.set(key, new THREE.Vector3(posAttr.getX(i), posAttr.getY(i), posAttr.getZ(i)));
+        }
+        srcGeo.dispose();
+ 
+        const nodes = [];
+        unique.forEach(v => {
+            const geo  = new THREE.OctahedronGeometry(0.28, 0);   // slightly larger, fewer = more readable
+            const mat  = new THREE.MeshBasicMaterial({
+                color: THEMES.dark.nodePulse, transparent: true,
+                opacity: 0.0, blending: THREE.AdditiveBlending
+            });
+            const mesh = new THREE.Mesh(geo, mat);
+            mesh.position.copy(v);
+            mesh.userData.phase = Math.random() * Math.PI * 2;
+            mesh.userData.speed = 0.5 + Math.random() * 0.8;      // slower pulse range
+            scene.add(mesh);
+            nodes.push(mesh);
+        });
+ 
+        return nodes;
+    };
+ 
+    const nodes = buildNodeSystem();
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 6. DATA-STREAM PARTICLES — reduced count to avoid noise on the mesh
+    //    Before: 260 particles → creates dense fog over the grid
+    //    After:  80 / 50      → sparse trails, grid remains legible
+    // ══════════════════════════════════════════════════════════════════════════
+    const STREAM_COUNT = isMobile() ? 50 : 80;
+    const streamGeo   = new THREE.BufferGeometry();
+    const streamPos   = new Float32Array(STREAM_COUNT * 3);
+    const streamMeta  = []; // { theta, phi, speed, radius }
+    const STREAM_R    = 32.4;
+ 
+    for (let i = 0; i < STREAM_COUNT; i++) {
+        const theta = Math.acos(2 * Math.random() - 1);
+        const phi   = Math.random() * Math.PI * 2;
+        streamMeta.push({ theta, phi, speed: 0.003 + Math.random() * 0.008, radius: STREAM_R });
+        streamPos[i * 3]     = STREAM_R * Math.sin(theta) * Math.cos(phi);
+        streamPos[i * 3 + 1] = STREAM_R * Math.cos(theta);
+        streamPos[i * 3 + 2] = STREAM_R * Math.sin(theta) * Math.sin(phi);
+    }
+    streamGeo.setAttribute('position', new THREE.BufferAttribute(streamPos, 3));
+ 
+    const streamMat = new THREE.PointsMaterial({
+        size: isMobile() ? 0.15 : 0.18,          // smaller dots
+        color: THEMES.dark.particle,
+        transparent: true, opacity: 0.55,         // was 0.75 — more subtle
+        blending: THREE.AdditiveBlending, depthWrite: false,
+        sizeAttenuation: true
+    });
+    const streamPoints = new THREE.Points(streamGeo, streamMat);
+    scene.add(streamPoints);
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 7. ELECTROMAGNETIC RIPPLES — expanding torus rings
+    // ══════════════════════════════════════════════════════════════════════════
+    const MAX_RIPPLES   = 4;
+    const ripplePool    = [];
+ 
+    const spawnRipple   = () => {
+        const mat  = new THREE.MeshBasicMaterial({
+            color: THEMES.dark.ripple, wireframe: true,
+            transparent: true, opacity: 0.8,
+            blending: THREE.AdditiveBlending
+        });
+        const geo  = new THREE.TorusGeometry(1, 0.04, 6, 40);
+        const mesh = new THREE.Mesh(geo, mat);
+ 
+        // Random orientation on icosahedron surface
+        const theta = Math.acos(2 * Math.random() - 1);
+        const phi   = Math.random() * Math.PI * 2;
+        mesh.position.set(
+            32 * Math.sin(theta) * Math.cos(phi),
+            32 * Math.cos(theta),
+            32 * Math.sin(theta) * Math.sin(phi)
+        );
+        mesh.lookAt(0, 0, 0);
+ 
+        mesh.userData = { scale: 0.1, life: 1.0, active: false };
+        scene.add(mesh);
+        ripplePool.push({ mesh, mat, geo });
+        return { mesh, mat, geo };
+    };
+ 
+    for (let i = 0; i < MAX_RIPPLES; i++) spawnRipple();
+ 
+    let nextRippleIdx = 0;
+    let rippleTimer   = 0;
+    const RIPPLE_INTERVAL = 1.8; // seconds between spawns
+ 
+    const triggerRipple = () => {
+        const r = ripplePool[nextRippleIdx % ripplePool.length];
+        nextRippleIdx++;
+ 
+        const theta = Math.acos(2 * Math.random() - 1);
+        const phi   = Math.random() * Math.PI * 2;
+        r.mesh.position.set(
+            32 * Math.sin(theta) * Math.cos(phi),
+            32 * Math.cos(theta),
+            32 * Math.sin(theta) * Math.sin(phi)
+        );
+        r.mesh.lookAt(0, 0, 0);
+        r.mesh.userData = { scale: 0.1, life: 1.0, active: true };
+        r.mesh.visible  = true;
+        r.mat.color.setHex(T().ripple);
+    };
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 8. FLOATING BUBBLES (wire polyhedra)
+    // ══════════════════════════════════════════════════════════════════════════
+    const MAX_BUBBLES   = isMobile() ? 60 : 130;
+    const spreadX       = isMobile() ? 38 : 72;
+    const bubbleGeo     = new THREE.IcosahedronGeometry(1, 0);
+    const bubbleMat     = new THREE.MeshBasicMaterial({
+        color: THEMES.dark.bubble, wireframe: true,
+        transparent: true, opacity: 0.55,
+        blending: THREE.AdditiveBlending, depthWrite: false
+    });
+ 
     const bubbles = [];
     const resetBubble = (mesh) => {
-        mesh.position.set((Math.random() - 0.5) * spreadX, -50 - Math.random() * 50, (Math.random() - 0.5) * 30);
-        const s = Math.random() * (isMobile ? 0.7 : 1.26) + 0.35;
+        mesh.position.set((Math.random() - 0.5) * spreadX, -52 - Math.random() * 40, (Math.random() - 0.5) * 28);
+        const s = Math.random() * (isMobile() ? 0.6 : 1.1) + 0.3;
         mesh.scale.set(s, s, s);
-        mesh.userData = { speed: Math.random() * 0.06 + 0.02, wobble: Math.random() * Math.PI * 2, popping: false };
+        mesh.userData = { speed: Math.random() * 0.055 + 0.018, wobble: Math.random() * Math.PI * 2, popping: false };
         mesh.visible = true;
     };
-
     for (let i = 0; i < MAX_BUBBLES; i++) {
-        const mesh = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
-        resetBubble(mesh);
-        scene.add(mesh);
-        bubbles.push(mesh);
+        const m = new THREE.Mesh(bubbleGeo, bubbleMat);
+        resetBubble(m);
+        scene.add(m);
+        bubbles.push(m);
     }
-
+ 
     const popParticles = [];
-    const pop = (pos, color) => {
-        const pCount = 10;
-        const pGeom = new THREE.BufferGeometry();
-        const pPos = new Float32Array(pCount * 3);
-        const pVelo = [];
+    const pop = (pos) => {
+        const pCount = 12;
+        const pGeo   = new THREE.BufferGeometry();
+        const pPos   = new Float32Array(pCount * 3);
+        const pVelo  = [];
         for (let i = 0; i < pCount; i++) {
-            pPos[i * 3] = pos.x; pPos[i * 3 + 1] = pos.y; pPos[i * 3 + 2] = pos.z;
-            pVelo.push({ x: (Math.random() - 0.5) * 0.3, y: (Math.random() - 0.5) * 0.3, z: (Math.random() - 0.5) * 0.3 });
+            pPos[i * 3]     = pos.x;
+            pPos[i * 3 + 1] = pos.y;
+            pPos[i * 3 + 2] = pos.z;
+            pVelo.push({ x: (Math.random() - 0.5) * 0.35, y: (Math.random() - 0.5) * 0.35, z: (Math.random() - 0.5) * 0.35 });
         }
-        pGeom.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
-        const pMat = new THREE.PointsMaterial({ size: 0.1, color: color, transparent: true, opacity: 1.0 });
-        const points = new THREE.Points(pGeom, pMat);
-        scene.add(points);
-        popParticles.push({ points, pVelo, life: 1.0 });
+        pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+        const pMat = new THREE.PointsMaterial({
+            size: 0.12, color: T().bubble,
+            transparent: true, opacity: 1.0,
+            blending: THREE.AdditiveBlending
+        });
+        const pts = new THREE.Points(pGeo, pMat);
+        scene.add(pts);
+        popParticles.push({ points: pts, pVelo, life: 1.0 });
     };
-
-    // ==========================================
-    // --- 5. 背景 E: 動態飛行生物 ---
-    // ==========================================
-    const creatures = [];
-    const creatureCount = isMobile ? 3 : 5;
-
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 9. FLYING CREATURES (Birds / UFOs)
+    // ══════════════════════════════════════════════════════════════════════════
     const createBird = () => {
-        const bird = new THREE.Group();
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0xffb703, flatShading: true });
-        const wingMat = new THREE.MeshStandardMaterial({ color: 0xfb8500, flatShading: true });
-
+        const bird    = new THREE.Group();
+        const bodyMat = new THREE.MeshBasicMaterial({ color: THEMES.dark.creature, wireframe: true });
+        const wingMat = new THREE.MeshBasicMaterial({ color: THEMES.dark.creatureWing, wireframe: true });
+ 
         const body = new THREE.Mesh(new THREE.ConeGeometry(0.4, 1.5, 4), bodyMat);
         body.rotation.x = Math.PI / 2;
         bird.add(body);
-
-        const leftWingPivot = new THREE.Group();
-        leftWingPivot.position.set(-0.2, 0.1, 0);
-        const leftWing = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 3), wingMat);
-        leftWing.position.set(-1, 0, 0);
-        leftWing.rotation.z = Math.PI / 2;
-        leftWingPivot.add(leftWing);
-        bird.add(leftWingPivot);
-
-        const rightWingPivot = new THREE.Group();
-        rightWingPivot.position.set(0.2, 0.1, 0);
-        const rightWing = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 3), wingMat);
-        rightWing.position.set(1, 0, 0);
-        rightWing.rotation.z = -Math.PI / 2;
-        rightWingPivot.add(rightWing); 
-        bird.add(rightWingPivot);
-
-        // --- 調整處：將 flapSpeed 調小（原本是 0.003 + 0.004），使其揮動更慢 ---
-        bird.userData = { leftWingPivot, rightWingPivot, flapSpeed: Math.random() * 0.001 + 0.002 };
-        
-        // --- 調整處：體型放大 5% ---
-        bird.scale.set(1.05, 1.05, 1.05);
-        
+ 
+        const makePivot = (side) => {
+            const pivot = new THREE.Group();
+            pivot.position.set(side * 0.2, 0.1, 0);
+            const wing = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2, 3), wingMat);
+            wing.position.set(side * 1, 0, 0);
+            wing.rotation.z = side * -Math.PI / 2;
+            pivot.add(wing);
+            bird.add(pivot);
+            return pivot;
+        };
+        bird.userData = {
+            leftWingPivot:  makePivot(-1),
+            rightWingPivot: makePivot(1),
+            flapSpeed: Math.random() * 0.0012 + 0.002
+        };
+        bird.scale.setScalar(1.08);
         return bird;
     };
-
+ 
     const createUFO = () => {
-        const ufo = new THREE.Group();
-        const disc = new THREE.Mesh(new THREE.CylinderGeometry(1.5, 1.5, 0.2, 16), new THREE.MeshStandardMaterial({ color: 0x8ecae6, metalness: 0.8 }));
+        const ufo  = new THREE.Group();
+        const disc = new THREE.Mesh(
+            new THREE.CylinderGeometry(1.5, 1.5, 0.2, 8),
+            new THREE.MeshBasicMaterial({ color: THEMES.dark.ufo, wireframe: true })
+        );
         ufo.add(disc);
-        const dome = new THREE.Mesh(new THREE.SphereGeometry(0.7, 16, 16, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshPhysicalMaterial({ color: 0xffffff, transmission: 0.9, transparent: true }));
+        const dome = new THREE.Mesh(
+            new THREE.IcosahedronGeometry(0.7, 1),
+            new THREE.MeshBasicMaterial({ color: 0xffffff, wireframe: true })
+        );
         dome.position.y = 0.1;
         ufo.add(dome);
-
-        // --- 調整處：體型放大 5% ---
-        ufo.scale.set(1.05, 1.05, 1.05);
-
+        ufo.scale.setScalar(1.08);
         return ufo;
     };
-
+ 
+    const creatures     = [];
+    const creatureCount = isMobile() ? 3 : 5;
+ 
     for (let i = 0; i < creatureCount; i++) {
         const wrapper = new THREE.Group();
-        const bird = createBird();
-        const ufo = createUFO();
+        const bird    = createBird();
+        const ufo     = createUFO();
         wrapper.add(bird);
         wrapper.add(ufo);
-
+ 
         wrapper.userData = {
-            angle: Math.random() * Math.PI * 2,
-            radiusX: 40 + Math.random() * 40,
-            radiusZ: 20 + Math.random() * 20,
-            speed: 0.002 + Math.random() * 0.002,
-            baseY: (Math.random() - 0.5) * 40,
-            birdRef: bird,
-            ufoRef: ufo
+            angle:    Math.random() * Math.PI * 2,
+            radiusX:  38 + Math.random() * 38,
+            radiusZ:  18 + Math.random() * 18,
+            speed:    0.0018 + Math.random() * 0.002,
+            baseY:    (Math.random() - 0.5) * 38,
+            birdRef:  bird,
+            ufoRef:   ufo
         };
-
         creatures.push(wrapper);
         scene.add(wrapper);
     }
-
-    // ==========================================
-    // --- Post-Processing (Cyberpunk UI Borders) ---
-    // ==========================================
-    const composer = new EffectComposer(renderer);
-    const renderPass = new RenderPass(scene, camera);
-    composer.addPass(renderPass);
-
-    const rgbShiftPass = new ShaderPass(RGBShiftShader);
-    rgbShiftPass.uniforms['amount'].value = 0.0015; // 輕微的 RGB 位移
-    composer.addPass(rgbShiftPass);
-
-    const filmPass = new FilmPass(
-        0.35,   // noise intensity
-        0.025,  // scanline intensity
-        648,    // scanline count
-        false   // grayscale
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // 10. POST PROCESSING
+    // ══════════════════════════════════════════════════════════════════════════
+    const composer  = new EffectComposer(renderer);
+    composer.addPass(new RenderPass(scene, camera));
+ 
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.8,   // strength — boosted for more visible glow on mesh
+        0.5,   // radius
+        0.75   // threshold — lowered to catch dimmer emissives
     );
-    composer.addPass(filmPass);
-
+    bloomPass.enabled = state.isDark;
+    composer.addPass(bloomPass);
+ 
+    const rgbShiftPass = new ShaderPass(RGBShiftShader);
+    rgbShiftPass.uniforms['amount'].value = 0.0012;
+    composer.addPass(rgbShiftPass);
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // HELPERS — apply theme colours to every material
+    // ══════════════════════════════════════════════════════════════════════════
+    const applyTheme = () => {
+        const th = T();
+ 
+        // Grid layers
+        gridLayers.forEach(({ mesh, mat, def }) => {
+            mat.color.setHex(def.primary ? th.gridPrimary : th.gridSecondary);
+            mat.opacity = state.isDark ? def.opacityDark : def.opacityLight;
+        });
+ 
+        // Cage
+        cageMat.color.setHex(th.gridPrimary);
+ 
+        // Scan
+        scanMat.color.setHex(th.scanLine);
+        scanRingMat.color.setHex(th.scanLine);
+ 
+        // Nodes
+        nodes.forEach(n => n.material.color.setHex(th.nodePulse));
+ 
+        // Streams
+        streamMat.color.setHex(th.particle);
+ 
+        // Ripples
+        ripplePool.forEach(r => r.mat.color.setHex(th.ripple));
+ 
+        // Bubbles
+        bubbleMat.color.setHex(th.bubble);
+ 
+        // Stars
+        stars.visible = state.isDark;
+        starMat.color.setHex(th.star);
+        starMat.opacity = state.isDark ? 0.85 : 0.4;
+        starMat.blending = state.isDark ? THREE.AdditiveBlending : THREE.NormalBlending;
+        starMat.needsUpdate = true;
+ 
+        // Creatures
+        creatures.forEach(wrapper => {
+            const bird = wrapper.userData.birdRef;
+            const ufo  = wrapper.userData.ufoRef;
+            if (bird.children[0]) bird.children[0].material.color.setHex(th.creature);
+            if (bird.children[1]?.children[0]) bird.children[1].children[0].material.color.setHex(th.creatureWing);
+            if (bird.children[2]?.children[0]) bird.children[2].children[0].material.color.setHex(th.creatureWing);
+            if (ufo.children[0]) ufo.children[0].material.color.setHex(th.ufo);
+        });
+ 
+        // Bloom
+        bloomPass.enabled = state.isDark;
+    };
+ 
+    applyTheme();
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // ANIMATE LOOP
+    // ══════════════════════════════════════════════════════════════════════════
     const animate = () => {
         requestAnimationFrame(animate);
-        const now = Date.now();
-        const delta = now - lastTime;
-        lastTime = now;
-        state.timeMs += delta * state.speedMultiplier;
-        const time = state.timeMs * 0.001;
-
-        // 即時修正顏色邏輯，改為從 state 讀取
-        const activeColor = state.isDark ? 0x00f2ff : 0x044e3a; 
-        geoNetMaterial.color.setHex(activeColor);
-        bubbleMaterial.color.setHex(activeColor);
-        geoNetMaterial.opacity = state.isDark ? 0.1 : 0.2;
-
-        stars.rotation.y += 0.0001 * state.speedMultiplier;
-        geoNet.rotation.y += 0.0004 * state.speedMultiplier;
-
-        // 飛行生物邏輯
-        creatures.forEach(wrapper => {
-            const data = wrapper.userData;
-            
-            // 1. 動態速度：俯衝加速，上升減速
-            const verticalMomentum = Math.cos(data.angle * 3) * 0.001; 
-            data.angle += (data.speed + verticalMomentum) * state.speedMultiplier;
-
-            wrapper.position.x = Math.cos(data.angle) * data.radiusX;
-            wrapper.position.z = Math.sin(data.angle) * data.radiusZ;
-            
-            const hover = Math.sin(data.angle * 3) * 5; 
-            const jitter = Math.sin(time + data.baseY) * 0.5; 
-            wrapper.position.y = data.baseY + hover + jitter;
-
-            // 2. 轉彎傾斜：讓飛行更生動
-            const bankAngle = Math.sin(data.angle) * 0.2; 
-            wrapper.rotation.z = bankAngle + (state.isDark ? Math.sin(time) * 0.15 : 0);
-            wrapper.rotation.y = -data.angle + Math.PI / 2;
-
-            data.birdRef.visible = !state.isDark;
-            data.ufoRef.visible = state.isDark;
-
-            if (!state.isDark) {
-                // 翅膀邏輯：使用變慢後的 flapSpeed
-                const flap = Math.sin(state.timeMs * data.birdRef.userData.flapSpeed);
-                data.birdRef.userData.leftWingPivot.rotation.z = flap * 0.6;
-                data.birdRef.userData.rightWingPivot.rotation.z = -flap * 0.6;
-                data.birdRef.rotation.x = Math.sin(time * 5) * 0.05;
-            } else {
-                data.ufoRef.rotation.y += 0.1 * state.speedMultiplier;
-                wrapper.position.x += Math.sin(time * 2) * 0.2;
+ 
+        const now   = Date.now();
+        const delta = (now - lastTime) / 1000; // seconds
+        lastTime    = now;
+        state.timeMs += delta * 1000 * state.speedMultiplier;
+        const t = state.timeMs * 0.001;
+        const sm = state.speedMultiplier;
+ 
+        // ── Grid layers ─────────────────────────────────────────────────────
+        gridLayers.forEach(({ mesh, def }) => {
+            mesh.rotation.y += def.rotSpeedY * sm;
+            mesh.rotation.x += def.rotSpeedX * sm;
+        });
+ 
+        // ── Cage (very slow) ────────────────────────────────────────────────
+        cage.rotation.y -= 0.00015 * sm;
+        cage.rotation.z += 0.00008 * sm;
+ 
+        // ── Stars ───────────────────────────────────────────────────────────
+        stars.rotation.y += 0.00008 * sm;
+ 
+        // ── Scan Line — sweeps Y from -34 to +34 ────────────────────────────
+        const scanY = Math.sin(t * 0.45) * 34;
+        scanLine.position.y = scanY;
+        scanRing.position.y = scanY;
+        // Fade at extremes, bright in mid-range
+        const scanIntensity = 1 - Math.abs(scanY) / 34;
+        scanMat.opacity     = state.isDark
+            ? 0.55 * scanIntensity
+            : 0.35 * scanIntensity;
+        scanRingMat.opacity = state.isDark
+            ? 0.4 * scanIntensity
+            : 0.25 * scanIntensity;
+ 
+        // ── Node pulses ──────────────────────────────────────────────────────
+        nodes.forEach(node => {
+            const pulse = 0.5 + 0.5 * Math.sin(t * node.userData.speed + node.userData.phase);
+            node.material.opacity = state.isDark
+                ? pulse * 0.75
+                : pulse * 0.5;
+            node.scale.setScalar(0.9 + pulse * 0.5);
+            node.rotation.y += 0.02 * sm;
+        });
+ 
+        // ── Data stream particles ────────────────────────────────────────────
+        const sPos = streamPoints.geometry.attributes.position;
+        for (let i = 0; i < STREAM_COUNT; i++) {
+            const m = streamMeta[i];
+            // Travel along phi (longitude)
+            m.phi += m.speed * sm;
+            if (m.phi > Math.PI * 2) {
+                m.phi -= Math.PI * 2;
+                m.theta = Math.acos(2 * Math.random() - 1); // re-seed latitude
+            }
+            sPos.array[i * 3]     = STREAM_R * Math.sin(m.theta) * Math.cos(m.phi);
+            sPos.array[i * 3 + 1] = STREAM_R * Math.cos(m.theta);
+            sPos.array[i * 3 + 2] = STREAM_R * Math.sin(m.theta) * Math.sin(m.phi);
+        }
+        sPos.needsUpdate = true;
+        streamMat.opacity = state.isDark ? 0.55 : 0.38;  // was 0.75/0.55
+ 
+        // ── Ripples ──────────────────────────────────────────────────────────
+        rippleTimer += delta * sm;
+        if (rippleTimer >= RIPPLE_INTERVAL) {
+            rippleTimer = 0;
+            triggerRipple();
+        }
+        ripplePool.forEach(r => {
+            if (!r.mesh.userData.active) return;
+            r.mesh.userData.scale += delta * 14 * sm;
+            r.mesh.userData.life  -= delta * 0.55 * sm;
+            const s = r.mesh.userData.scale;
+            r.mesh.scale.set(s, s, 1);
+            r.mat.opacity = state.isDark
+                ? Math.max(0, r.mesh.userData.life) * 0.7
+                : Math.max(0, r.mesh.userData.life) * 0.45;
+            if (r.mesh.userData.life <= 0) {
+                r.mesh.userData.active = false;
+                r.mesh.visible = false;
             }
         });
-
-        // 泡泡運動
+ 
+        // ── Bubbles ──────────────────────────────────────────────────────────
         bubbles.forEach(mesh => {
             if (mesh.userData.popping) return;
-            mesh.position.y += mesh.userData.speed * state.speedMultiplier;
-            mesh.position.x += Math.sin(time + mesh.userData.wobble) * 0.02 * state.speedMultiplier;
-
-            if (mesh.position.y > 45) {
+            mesh.position.y += mesh.userData.speed * sm;
+            mesh.position.x += Math.sin(t + mesh.userData.wobble) * 0.018 * sm;
+            mesh.rotation.y  += 0.008 * sm;
+            if (mesh.position.y > 44) {
                 mesh.userData.popping = true;
-                pop(mesh.position, bubbleMaterial.color);
+                pop(mesh.position);
                 mesh.visible = false;
-                setTimeout(() => {
-                    mesh.userData.popping = false;
-                    resetBubble(mesh);
-                }, 1000 + Math.random() * 2000);
+                setTimeout(() => { mesh.userData.popping = false; resetBubble(mesh); }, 1200 + Math.random() * 2000);
             }
         });
-
-        // 粒子邏輯
+ 
+        // Pop particles
         for (let i = popParticles.length - 1; i >= 0; i--) {
-            const p = popParticles[i];
-            p.life -= 0.02;
-            const posArr = p.points.geometry.attributes.position;
+            const p   = popParticles[i];
+            p.life   -= delta * 1.1 * sm;
+            const pa  = p.points.geometry.attributes.position;
             for (let j = 0; j < p.pVelo.length; j++) {
-                posArr.array[j * 3] += p.pVelo[j].x;
-                posArr.array[j * 3 + 1] += p.pVelo[j].y;
-                posArr.array[j * 3 + 2] += p.pVelo[j].z;
+                pa.array[j * 3]     += p.pVelo[j].x * sm;
+                pa.array[j * 3 + 1] += p.pVelo[j].y * sm;
+                pa.array[j * 3 + 2] += p.pVelo[j].z * sm;
             }
-            posArr.needsUpdate = true;
-            p.points.material.opacity = p.life;
+            pa.needsUpdate = true;
+            p.points.material.opacity = Math.max(0, p.life);
             if (p.life <= 0) {
                 scene.remove(p.points);
                 p.points.geometry.dispose();
@@ -297,55 +589,111 @@ export function initThreeBackground(isDarkMode = false) {
                 popParticles.splice(i, 1);
             }
         }
-
-        // 動態調整 RGB Shift 強度，模擬能量脈衝
-        rgbShiftPass.uniforms['amount'].value = 0.0015 + Math.sin(time * 2) * 0.001;
-
+ 
+        // ── Creatures ────────────────────────────────────────────────────────
+        creatures.forEach(wrapper => {
+            const d  = wrapper.userData;
+            const vm = Math.cos(d.angle * 3) * 0.0008;
+            d.angle += (d.speed + vm) * sm;
+ 
+            wrapper.position.x = Math.cos(d.angle) * d.radiusX;
+            wrapper.position.z = Math.sin(d.angle) * d.radiusZ;
+            wrapper.position.y = d.baseY + Math.sin(d.angle * 3) * 5 + Math.sin(t + d.baseY) * 0.5;
+            wrapper.rotation.z = Math.sin(d.angle) * 0.2 + (state.isDark ? Math.sin(t) * 0.12 : 0);
+            wrapper.rotation.y = -d.angle + Math.PI / 2;
+ 
+            d.birdRef.visible = !state.isDark;
+            d.ufoRef.visible  = state.isDark;
+ 
+            if (!state.isDark) {
+                const flap = Math.sin(state.timeMs * d.birdRef.userData.flapSpeed);
+                d.birdRef.userData.leftWingPivot.rotation.z  = flap * 0.6;
+                d.birdRef.userData.rightWingPivot.rotation.z = -flap * 0.6;
+            } else {
+                d.ufoRef.rotation.y += 0.1 * sm;
+                wrapper.position.x  += Math.sin(t * 2) * 0.18;
+            }
+        });
+ 
+        // ── RGB shift pulse ───────────────────────────────────────────────────
+        rgbShiftPass.uniforms['amount'].value = state.isDark
+            ? 0.0012 + Math.sin(t * 2.5) * 0.0009
+            : 0.0003;
+ 
         composer.render();
     };
-
-    window.addEventListener('resize', () => {
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // RESIZE
+    // ══════════════════════════════════════════════════════════════════════════
+    const onResize = () => {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
         composer.setSize(window.innerWidth, window.innerHeight);
-    });
-
+    };
+    window.addEventListener('resize', onResize);
+ 
     animate();
-
-    // 回傳控制接口給外部 watch 使用
+ 
+    // ══════════════════════════════════════════════════════════════════════════
+    // PUBLIC API
+    // ══════════════════════════════════════════════════════════════════════════
     return {
-        updateTheme: (newVal) => {
+        /**
+         * Call this from your Vue watcher:
+         * watch(isDark, val => bg.updateTheme(val))
+         */
+        updateTheme(newVal) {
             state.isDark = newVal;
+            applyTheme();
         },
-        setSpeed: (multiplier, duration = 0) => {
+ 
+        /**
+         * Smoothly change speed.
+         * @param {number} multiplier  — e.g. 3 for triple speed
+         * @param {number} duration    — seconds (0 = instant)
+         */
+        setSpeed(multiplier, duration = 0) {
             if (duration > 0) {
-                gsap.to(state, {
-                    speedMultiplier: multiplier,
-                    duration: duration,
-                    ease: "power2.inOut"
-                });
+                gsap.to(state, { speedMultiplier: multiplier, duration, ease: 'power2.inOut' });
             } else {
                 gsap.killTweensOf(state);
                 state.speedMultiplier = multiplier;
             }
         },
-        celebrate: () => {
-            // 1. 泡泡加速
+ 
+        /**
+         * Trigger a celebrate animation burst.
+         */
+        celebrate() {
+            // 1. Bubble burst
             bubbles.forEach(b => {
-                b.userData.speed *= 3;
-                setTimeout(() => b.userData.speed /= 3, 3000);
+                b.userData.speed *= 3.5;
+                setTimeout(() => (b.userData.speed /= 3.5), 3200);
             });
-
-            // 2. 網格變色
-            const originalColor = geoNetMaterial.color.getHex();
-            geoNetMaterial.color.setHex(0xffd700); // Gold
-            setTimeout(() => geoNetMaterial.color.setHex(originalColor), 3000);
-
-            // 3. 星空閃爍加速
-            const originalSize = starMaterial.size;
-            starMaterial.size = 0.5;
-            setTimeout(() => starMaterial.size = originalSize, 3000);
+            // 2. Flash grid to gold
+            gridLayers.forEach(({ mat }) => mat.color.setHex(0xffd700));
+            setTimeout(() => applyTheme(), 3200);
+            // 3. Rapid ripples
+            let rc = 0;
+            const ri = setInterval(() => {
+                triggerRipple();
+                if (++rc >= 8) clearInterval(ri);
+            }, 280);
+            // 4. Bloom spike
+            if (state.isDark) {
+                bloomPass.strength = 3.2;
+                gsap.to(bloomPass, { strength: 1.8, duration: 2.5, ease: 'power2.out' });
+            }
+        },
+ 
+        /**
+         * Clean up event listeners (call on Vue component unmount)
+         */
+        destroy() {
+            window.removeEventListener('resize', onResize);
+            renderer.dispose();
         }
     };
 }
@@ -391,26 +739,8 @@ const LayoutComponent = defineComponent({
 
         <!-- Cyberpunk UI Borders -->
         <div class="pointer-events-none fixed inset-0 z-50 overflow-hidden">
-            <!-- Top Left Asymmetric Border -->
-            <div class="absolute top-0 left-0 w-64 h-64">
-                <svg viewBox="0 0 256 256" class="w-full h-full drop-shadow-[0_0_8px_rgba(0,242,255,0.8)]">
-                    <path d="M 0 64 L 64 0 L 256 0" fill="none" stroke="rgba(0,242,255,0.5)" stroke-width="2" />
-                    <path d="M 0 80 L 80 0 L 256 0" fill="none" class="animate-pulse" stroke="#00f2ff" stroke-width="4" stroke-dasharray="50 200" stroke-dashoffset="0">
-                        <animate attributeName="stroke-dashoffset" values="250;0" dur="2s" repeatCount="indefinite" />
-                    </path>
-                </svg>
-            </div>
-            <!-- Bottom Right Asymmetric Border -->
-            <div class="absolute bottom-0 right-0 w-64 h-64 rotate-180">
-                <svg viewBox="0 0 256 256" class="w-full h-full drop-shadow-[0_0_8px_rgba(0,242,255,0.8)]">
-                    <path d="M 0 64 L 64 0 L 256 0" fill="none" stroke="rgba(0,242,255,0.5)" stroke-width="2" />
-                    <path d="M 0 80 L 80 0 L 256 0" fill="none" class="animate-pulse" stroke="#00f2ff" stroke-width="4" stroke-dasharray="50 200" stroke-dashoffset="0">
-                        <animate attributeName="stroke-dashoffset" values="250;0" dur="2s" repeatCount="indefinite" />
-                    </path>
-                </svg>
-            </div>
             <!-- Scanline Overlay (CSS fallback if Three.js FilmPass is subtle) -->
-            <div class="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.05)_50%)] bg-[length:100%_4px] opacity-20 dark:opacity-40 pointer-events-none mix-blend-overlay"></div>
+            <div class="absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.05)_50%)] bg-[length:100%_4px] opacity-10 dark:opacity-40 pointer-events-none mix-blend-overlay"></div>
         </div>
 
         <div v-cloak class="relative z-10 h-screen overflow-hidden py-4 px-4 md:px-8 flex flex-col">
@@ -554,155 +884,20 @@ const LayoutComponent = defineComponent({
                 }
             });
         };
+
+        /* 暫時不用
         const dogStyle = ref({
             left: '-100px',
             transform: 'scaleX(1)'
         });
-        const peekStyle = ref({
-            top: 'auto',
-            bottom: 'auto',
-            left: 'auto',
-            right: 'auto',
-            transform: 'none',
-            opacity: 0,
-            x: 0,
-            y: 0
-        });
+
         const triggerDog = () => triggerAnimal(dogActive, dogStyle, 150, 7.5);
-        const triggerPeek = () => {
-            if (peekingActive.value) return;
-
-            const screenWidth = window.innerWidth;
-            const screenHeight = window.innerHeight;
-            const centerX = screenWidth / 2;
-            const centerY = screenHeight / 2;
-            
-            const side = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-            const pos = Math.random() * 80 + 10; // 10% to 90%
-            
-            // Reset styles completely
-            peekStyle.value = {
-                top: 'auto',
-                bottom: 'auto',
-                left: 'auto',
-                right: 'auto',
-                transform: 'none',
-                opacity: 0,
-                x: 0,
-                y: 0
-            };
-
-            if (isDarkMode.value) {
-                // Dark Mode: Flashlight at edges pointing to center
-                let startX = 0, startY = 0;
-                
-                switch(side) {
-                    case 0: // Top
-                        startX = (pos / 100) * screenWidth;
-                        startY = -60;
-                        break;
-                    case 1: // Right
-                        startX = screenWidth + 60;
-                        startY = (pos / 100) * screenHeight;
-                        break;
-                    case 2: // Bottom
-                        startX = (pos / 100) * screenWidth;
-                        startY = screenHeight + 60;
-                        break;
-                    case 3: // Left
-                        startX = -60;
-                        startY = (pos / 100) * screenHeight;
-                        break;
-                }
-
-                peekStyle.value.left = `${startX}px`;
-                peekStyle.value.top = `${startY}px`;
-                
-                // Calculate angle to center
-                const angle = Math.atan2(centerY - startY, centerX - startX) * (180 / Math.PI);
-                peekStyle.value.transform = `rotate(${angle + 135}deg)`;
-                
-                peekingActive.value = true;
-
-                const tl = gsap.timeline({
-                    onComplete: () => {
-                        peekingActive.value = false;
-                        peekStyle.value.opacity = 0;
-                    }
-                });
-
-                const moveDist = 380; // Increased distance so flashlight body is visible
-                const moveX = Math.cos(angle * Math.PI / 180) * moveDist;
-                const moveY = Math.sin(angle * Math.PI / 180) * moveDist;
-
-                tl.to(peekStyle.value, { opacity: 1, duration: 0.3 })
-                  .to(peekStyle.value, { x: moveX, y: moveY, duration: 1.5, ease: "back.out(1.2)" })
-                  .to(peekStyle.value, { rotation: '+=40', duration: 1.2, ease: "sine.inOut" })
-                  .to(peekStyle.value, { rotation: '-=80', duration: 1.8, ease: "sine.inOut" })
-                  .to(peekStyle.value, { x: 0, y: 0, opacity: 0, duration: 0.6, delay: 1 });
-
-            } else {
-                // Light Mode: Curious Cat peeking from edges
-                let moveX = 0, moveY = 0, rotate = 0;
-
-                switch(side) {
-                    case 0: // Top
-                        peekStyle.value.top = '-80px';
-                        peekStyle.value.left = `${pos}%`;
-                        moveY = 100;
-                        rotate = 180;
-                        break;
-                    case 1: // Right
-                        peekStyle.value.right = '-80px';
-                        peekStyle.value.top = `${pos}%`;
-                        moveX = -100;
-                        rotate = -90;
-                        break;
-                    case 2: // Bottom
-                        peekStyle.value.bottom = '-80px';
-                        peekStyle.value.left = `${pos}%`;
-                        moveY = -100;
-                        rotate = 0;
-                        break;
-                    case 3: // Left
-                        peekStyle.value.left = '-80px';
-                        peekStyle.value.top = `${pos}%`;
-                        moveX = 100;
-                        rotate = 90;
-                        break;
-                }
-
-                peekStyle.value.transform = `rotate(${rotate}deg)`;
-                peekStyle.value.opacity = 1;
-                peekingActive.value = true;
-
-                gsap.to(peekStyle.value, {
-                    x: moveX,
-                    y: moveY,
-                    duration: 0.8,
-                    ease: "back.out(2.5)",
-                    onComplete: () => {
-                        setTimeout(() => {
-                            gsap.to(peekStyle.value, {
-                                x: 0,
-                                y: 0,
-                                opacity: 0,
-                                duration: 0.6,
-                                onComplete: () => {
-                                    peekingActive.value = false;
-                                }
-                            });
-                        }, 2500);
-                    }
-                });
-            }
-        };
 
         setInterval(() => {
             const rand = Math.random();
-            if (rand > 0.5) triggerPeek();
             if (rand > 0.25) triggerDog();
         }, 1500);
+        */
 
 
         // ==========================================
@@ -789,8 +984,6 @@ const LayoutComponent = defineComponent({
             dogActive,
             birdActive,
             peekingActive,
-            dogStyle,
-            peekStyle,
             globalAnnouncement,
             toggleDarkMode,
             goToHome,

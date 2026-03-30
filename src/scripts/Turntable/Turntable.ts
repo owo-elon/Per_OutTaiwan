@@ -18,6 +18,7 @@ const Turntable = defineComponent({
     const canvasRef = ref<HTMLCanvasElement | null>(null);
     const containerRef = ref<HTMLElement | null>(null);
     const isSpinning = ref(false);
+    const isBraking = ref(false);
     const prizes = ref<Prize[]>([
       { text: '100萬', color: '#fbbf24', level: 1 },
       { text: '10萬', color: '#94a3b8', level: 2 },
@@ -34,6 +35,7 @@ const Turntable = defineComponent({
 
     let currentRotation = 0;
     let velocity = 0;
+    let autoBrakeTimeout: number | null = null;
     const friction = 0.988; // 稍微調高摩擦力，讓結尾更平滑
     const stopThreshold = 0.0005;
 
@@ -116,32 +118,33 @@ const Turntable = defineComponent({
         ctx.restore();
       });
 
-      // 4. 繪製中心軸 (Center Hub)
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 28, 0, Math.PI * 2);
-      const hubGrad = ctx.createLinearGradient(centerX - 20, centerY - 20, centerX + 20, centerY + 20);
-      hubGrad.addColorStop(0, isDark ? '#334155' : '#f8fafc');
-      hubGrad.addColorStop(1, isDark ? '#0f172a' : '#cbd5e1');
-      ctx.fillStyle = hubGrad;
-      ctx.shadowBlur = 15;
-      ctx.shadowColor = 'rgba(0,0,0,0.4)';
-      ctx.fill();
-      
-      // 中心指示點
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, 6, 0, Math.PI * 2);
-      ctx.fillStyle = '#10b981';
-      ctx.fill();
+      // 4. 繪製中心軸 (Center Hub) - Removed as we use an HTML button now
       ctx.restore();
     };
 
-    const spin = () => {
-      if (isSpinning.value) return;
+    const toggleSpin = () => {
+      if (isSpinning.value) {
+        if (!isBraking.value) {
+          isBraking.value = true;
+          if (autoBrakeTimeout) {
+            clearTimeout(autoBrakeTimeout);
+            autoBrakeTimeout = null;
+          }
+        }
+        return;
+      }
       
       result.value = null;
       isSpinning.value = true;
-      velocity = Math.random() * 0.45 + 0.35; // 初始隨機推動力
+      isBraking.value = false;
+      velocity = Math.random() * 0.1 + 0.4; // 初始推動力
+      
+      // 8秒過後沒去按暫停會自己煞車
+      autoBrakeTimeout = window.setTimeout(() => {
+        if (isSpinning.value && !isBraking.value) {
+          isBraking.value = true;
+        }
+      }, 8000);
       
       // Three.js 互動：進入加速模式
       // @ts-ignore
@@ -155,7 +158,15 @@ const Turntable = defineComponent({
 
     const updateSpin = () => {
       currentRotation += velocity;
-      velocity *= friction;
+      
+      if (isBraking.value) {
+        velocity *= friction; // 煞車時才減速
+      } else {
+        // 保持勻速或微幅減速
+        velocity *= 0.999; 
+        // 確保最低速度
+        if (velocity < 0.2) velocity = 0.2;
+      }
 
       // 讓背景跟著轉盤速度連動
       // @ts-ignore
@@ -166,11 +177,14 @@ const Turntable = defineComponent({
 
       drawTurntable();
 
-      if (velocity > stopThreshold) {
-        requestAnimationFrame(updateSpin);
-      } else {
+      if (isBraking.value && velocity <= stopThreshold) {
         isSpinning.value = false;
+        isBraking.value = false;
         velocity = 0;
+        if (autoBrakeTimeout) {
+          clearTimeout(autoBrakeTimeout);
+          autoBrakeTimeout = null;
+        }
         
         // Three.js 互動：恢復正常
         // @ts-ignore
@@ -179,6 +193,8 @@ const Turntable = defineComponent({
             window.threeBg.setSpeed(1.0);
         }
         determineResult();
+      } else {
+        requestAnimationFrame(updateSpin);
       }
     };
 
@@ -286,9 +302,9 @@ const Turntable = defineComponent({
     });
 
     return {
-      canvasRef, containerRef, isSpinning, prizes, newItemText, newItemLevel,
+      canvasRef, containerRef, isSpinning, isBraking, prizes, newItemText, newItemLevel,
       result, showResultModal, isSettingsOpen, announcement,
-      spin, addPrize, removePrize, resetToDefault
+      toggleSpin, addPrize, removePrize, resetToDefault
     };
   },
   template: `<LayoutComponent title="幸運轉盤">
@@ -328,22 +344,35 @@ const Turntable = defineComponent({
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-8 items-start">
+        <div class="flex flex-col lg:flex-row gap-8 transition-all duration-500" :class="isSettingsOpen ? 'items-start' : 'items-center justify-center min-h-[calc(100vh-200px)]'">
           
           <!-- 左側：轉盤區域 -->
           <div class="flex-1 w-full flex flex-col items-center" ref="containerRef">
-            <div class="turntable-container mb-8 relative">
+            <div class="turntable-container mb-8 relative flex items-center justify-center">
               <div class="pointer"></div>
               <canvas id="turntableCanvas" ref="canvasRef" class="max-w-full h-auto"></canvas>
+              
+              <!-- 中心按鈕 -->
+              <button 
+                @click="toggleSpin"
+                class="absolute z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 border-4 border-white dark:border-slate-800"
+                :class="isSpinning && !isBraking ? 'bg-red-500 hover:bg-red-600 text-white' : (isBraking ? 'bg-slate-400 text-white cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white')"
+                :disabled="isBraking"
+              >
+                <!-- Play Icon -->
+                <svg v-if="!isSpinning" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 ml-1" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z" />
+                </svg>
+                <!-- Pause/Stop Icon -->
+                <svg v-else-if="!isBraking" xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6 6h12v12H6z" />
+                </svg>
+                <!-- Braking Icon (Spinning) -->
+                <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+              </button>
             </div>
-            
-            <button 
-              @click="spin" 
-              :disabled="isSpinning"
-              class="neon-btn px-12 py-4 rounded-full text-slate-900 dark:text-white text-xl md:text-2xl font-bold uppercase tracking-widest transition-all active:scale-95 disabled:opacity-50 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-black shadow-lg shadow-black/10 dark:shadow-black/20"
-            >
-              {{ isSpinning ? '旋轉中...' : '開始抽獎' }}
-            </button>
           </div>
   
           <!-- 右側：設定區域 -->
@@ -424,7 +453,7 @@ const Turntable = defineComponent({
                         </span>
                       </div>
                     </div>
-                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all p-1">
+                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 transition-all p-1">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>

@@ -1,7 +1,7 @@
 {
   "countries": {
     "korea": {
-      "show": true,
+      "show": false,
       "message": "🇰🇷 韓國旅遊提醒：近期韓國氣溫較低，請記得攜帶保暖衣物。另外，入境韓國需填寫 Q-Code 或紙本健康申報表。"
     },
     "japan": {
@@ -14,7 +14,7 @@
     }
   },
   "global": {
-    "show": false,
+    "show": true,
     "message": "要出國了請大家好好準備, 再次感謝沙烏地阿拉寶, 贊助本次出遊"
   },
   "turntable": {
