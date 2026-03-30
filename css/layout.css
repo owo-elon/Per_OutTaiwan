@@ -1,6 +1,8 @@
 @import "tailwindcss";
 @source "../index.html";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --font-sans: "Noto Sans TC", ui-sans-serif, system-ui, sans-serif;
 }
@@ -8,6 +10,9 @@
 @layer base {
   body {
     @apply font-sans overflow-x-hidden bg-transparent text-slate-900 transition-colors duration-500;
+  }
+  input, select, textarea {
+    @apply text-slate-900 dark:text-white;
   }
 }
 
@@ -112,7 +117,7 @@
 }
 
 .search-input {
-  @apply w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all;
+  @apply w-full pl-10 pr-4 py-3 bg-white/50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900;
 }
 
 /* Running Dog Animation */
