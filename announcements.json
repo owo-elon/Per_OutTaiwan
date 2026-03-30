@@ -1,24 +1,24 @@
 {
   "countries": {
     "korea": {
-      "show": true,
-      "message": "感謝2026/3/20本次韓國旅遊費用, 由楊仁寶贊助"
+      "show": false,
+      "message": "🇰🇷 韓國旅遊提醒：近期韓國氣溫較低，請記得攜帶保暖衣物。另外，入境韓國需填寫 Q-Code 或紙本健康申報表。"
     },
     "japan": {
-      "show": false,
-      "message": "日本旅遊公告：請記得攜帶 JR Pass 與網卡。"
+      "show": true,
+      "message": "🇯🇵 日本旅遊提醒：日本已全面取消入境疫苗證明，但建議仍可填寫 Visit Japan Web 以加速通關。"
     },
     "thailand": {
-      "show": false,
-      "message": "泰國旅遊公告：請注意防曬與補水。"
-    },
-    "usa": {
-      "show": false,
-      "message": "美國旅遊公告：請確認美簽 (ESTA) 是否有效。"
-    },
-    "europe": {
-      "show": false,
-      "message": "歐洲旅遊公告：請注意各國插座規格差異。"
+      "show": true,
+      "message": "🇹🇭 泰國旅遊提醒：泰國目前對台灣旅客免簽證，請把握機會前往旅遊！"
     }
+  },
+  "global": {
+    "show": true,
+    "message": "要出國了請大家好好準備, 再次感謝沙烏地阿拉寶, 贊助本次出遊"
+  },
+  "turntable": {
+    "show": false,
+    "message": "以下獎項由阿寶大帥哥, 贊助！!"
   }
 }
