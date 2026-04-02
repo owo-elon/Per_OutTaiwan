@@ -1,7 +1,10 @@
 import { createApp, defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { LayoutComponent } from '../Layout/Layout';
-import { ThreeCarousel, CarouselItem } from './ThreeCarousel';
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+import { LayoutComponent } from '../layout/layout';
+import { ThreeCarousel, CarouselItem } from './threecarousel';
 import '../../css/index.css';
+import '../../css/home.css';
 
 const Home = defineComponent({
   name: 'Home',
@@ -22,7 +25,7 @@ const Home = defineComponent({
         title: '打包清單',
         description: '出國旅行必備物品清單，幫您輕鬆整理行李',
         icon: '🧳',
-        link: `${import.meta.env.BASE_URL}src/view/TakeList/TakeList.html`,
+        link: `${import.meta.env.BASE_URL}src/view/takelist/takelist.html`,
         category: 'tool'
       },
       {
@@ -30,7 +33,7 @@ const Home = defineComponent({
         title: '幸運轉盤',
         description: '猶豫不決嗎？讓轉盤幫您做決定！支援自定義獎項',
         icon: '🎡',
-        link: `${import.meta.env.BASE_URL}src/view/Turntable/Turntable.html`,
+        link: `${import.meta.env.BASE_URL}src/view/turntable/turntable.html`,
         category: 'game'
       },
       {
@@ -58,13 +61,12 @@ const Home = defineComponent({
     ];
 
     const filteredFeatures = computed(() => {
-      if (selectedCategory.value === 'all') return features;
-      return features.filter(f => f.category === selectedCategory.value);
+      return features; // Do not filter, always show all
     });
 
     onMounted(() => {
       if (carouselContainer.value) {
-        carousel = new ThreeCarousel(carouselContainer.value, filteredFeatures.value, isDark.value, (item) => {
+        carousel = new ThreeCarousel(carouselContainer.value, features, isDark.value, (item) => {
           if (item.link !== '#') {
             window.location.href = item.link;
           } else {
@@ -76,10 +78,17 @@ const Home = defineComponent({
         });
       }
 
-      // Watch for category changes
-      watch(filteredFeatures, (newVal) => {
+      // Watch for category changes to rotate
+      watch(selectedCategory, (newCat) => {
         if (carousel) {
-          carousel.setItems(newVal);
+          if (newCat === 'all') {
+            carousel.rotateToIndex(0);
+          } else {
+            const index = features.findIndex(f => f.category === newCat);
+            if (index !== -1) {
+              carousel.rotateToIndex(index);
+            }
+          }
         }
       });
 
@@ -98,8 +107,17 @@ const Home = defineComponent({
 
       observer.observe(document.body, { attributes: true });
 
+      const closeMenus = (e: MouseEvent) => {
+        const target = e.target as HTMLElement;
+        if (!target.closest('.home-category-container')) {
+          isCategoryMenuOpen.value = false;
+        }
+      };
+      window.addEventListener('click', closeMenus);
+
       onUnmounted(() => {
         observer.disconnect();
+        window.removeEventListener('click', closeMenus);
         if (carousel) {
           carousel.destroy();
         }
@@ -126,57 +144,57 @@ const Home = defineComponent({
     <LayoutComponent title="OutTaiwan 3D 導航">
       <template #bottom-left>
         <!-- Category Selector -->
-        <div class="flex flex-col-reverse items-start gap-4">
+        <div class="home-category-container">
           <!-- Toggle Button -->
           <button @click="isCategoryMenuOpen = !isCategoryMenuOpen" 
-                  class="w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]">
+                  class="home-category-toggle">
             <!-- Glow effect for dark mode -->
-            <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
+            <div class="home-category-glow"></div>
             
-            <span v-if="!isCategoryMenuOpen" class="text-2xl relative z-10">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span v-if="!isCategoryMenuOpen" class="home-category-icon">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="home-category-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
 
             <!-- Tooltip -->
-            <span class="absolute left-20 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10">
+            <span class="home-category-tooltip">
                 {{ isCategoryMenuOpen ? '關閉選單' : '類別：' + categories.find(c => c.id === selectedCategory)?.name }}
             </span>
           </button>
 
           <!-- Category Menu -->
           <transition 
-              enter-active-class="transition duration-300 ease-out"
-              enter-from-class="transform -translate-x-8 opacity-0"
-              enter-to-class="transform translate-x-0 opacity-100"
-              leave-active-class="transition duration-200 ease-in"
-              leave-from-class="transform translate-x-0 opacity-100"
-              leave-to-class="transform -translate-x-8 opacity-0"
+              enter-active-class="menu-enter-active"
+              enter-from-class="menu-enter-from"
+              enter-to-class="menu-enter-to"
+              leave-active-class="menu-leave-active"
+              leave-from-class="menu-leave-from"
+              leave-to-class="menu-leave-to"
           >
             <div v-if="isCategoryMenuOpen" 
-                 class="w-48 glass-card p-3 rounded-3xl border border-white/20 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col gap-2">
+                 class="home-category-menu glass-card">
               <button v-for="cat in categories" 
                       :key="cat.id"
                       @click="selectCategory(cat.id)"
-                      class="flex items-center gap-3 px-4 py-3 rounded-2xl transition-all"
-                      :class="selectedCategory === cat.id ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-500/30' : 'hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300'">
-                <span class="text-xl">{{ cat.icon }}</span>
-                <span class="font-bold text-sm">{{ cat.name }}</span>
+                      class="home-category-item"
+                      :class="selectedCategory === cat.id ? 'home-category-item-active' : 'home-category-item-inactive'">
+                <span class="home-category-item-icon">{{ cat.icon }}</span>
+                <span class="home-category-item-text">{{ cat.name }}</span>
               </button>
             </div>
           </transition>
         </div>
       </template>
 
-      <div class="relative w-full h-[600px] md:h-[700px] overflow-hidden bg-transparent">
+      <div class="home-carousel-wrapper">
         
         <!-- Three.js Container -->
-        <div ref="carouselContainer" class="w-full h-full"></div>
+        <div ref="carouselContainer" class="home-carousel-container"></div>
 
         <!-- Developing Toast -->
         <transition name="fade">
-          <div v-if="activeItem" class="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#1A1A1A] border border-[#00E5FF] p-6 rounded-lg shadow-[0_0_30px_rgba(0,229,255,0.3)] text-[#00E5FF] font-mono text-center">
-            <div class="text-2xl mb-2">🚧 ACCESS DENIED 🚧</div>
+          <div v-if="activeItem" class="home-toast">
+            <div class="home-toast-title">🚧 ACCESS DENIED 🚧</div>
             <div>{{ activeItem.title }} 正在開發中...</div>
           </div>
         </transition>
@@ -186,6 +204,15 @@ const Home = defineComponent({
   `
 });
 
-createApp(Home).mount('#app');
+const app = createApp(Home);
+app.use(PrimeVue, {
+    theme: {
+        preset: Aura,
+        options: {
+            darkModeSelector: '.dark',
+        }
+    }
+});
+app.mount('#app');
 
 

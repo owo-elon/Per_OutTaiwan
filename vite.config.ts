@@ -30,8 +30,8 @@ export default defineConfig(({ mode }) => {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
-          takeList: path.resolve(__dirname, 'src/view/TakeList/TakeList.html'),
-          turntable: path.resolve(__dirname, 'src/view/Turntable/Turntable.html'),
+          takeList: path.resolve(__dirname, 'src/view/takelist/takelist.html'),
+          turntable: path.resolve(__dirname, 'src/view/turntable/turntable.html'),
         },
         external: [], // 確保 vue 沒有被意外排除
       }

@@ -1,6 +1,8 @@
 import { createApp, defineComponent, ref, onMounted, onUnmounted, watch, nextTick, computed } from 'vue';
-import { LayoutComponent, createParticles } from '../../Layout/Layout';
-import '../../../css/Turntable.css';
+import PrimeVue from 'primevue/config';
+import Aura from '@primevue/themes/aura';
+import { LayoutComponent, createParticles } from '../../layout/layout';
+import '../../../css/turntable/turntable.css';
 import '../../../css/index.css';
 
 interface Prize {
@@ -240,7 +242,7 @@ const Turntable = defineComponent({
       const colors = ['#f87171', '#fb923c', '#fbbf24', '#34d399', '#60a5fa', '#818cf8', '#a78bfa', '#f472b6'];
       const randomColor = colors[Math.floor(Math.random() * colors.length)];
       
-      prizes.value.push({
+      prizes.value.unshift({
         text: newItemText.value,
         color: randomColor,
         level: newItemLevel.value as any
@@ -312,10 +314,10 @@ const Turntable = defineComponent({
         <!-- 手機版設定切換按鈕 -->
         <button 
           @click="isSettingsOpen = !isSettingsOpen"
-          class="lg:hidden w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all group border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)]"
+          class="turntable-settings-toggle"
         >
           <!-- Glow effect for dark mode -->
-          <div class="absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse"></div>
+          <div class="turntable-settings-glow"></div>
           
           <svg v-if="!isSettingsOpen" xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
@@ -327,11 +329,10 @@ const Turntable = defineComponent({
         </button>
       </template>
 
-      <div class="max-w-6xl mx-auto px-4 py-8 relative">
+      <div class="turntable-main-wrapper">
         
         <!-- 公告欄 -->
-        <div v-if="announcement.show" 
-             class="mb-8 py-4 bg-slate-100 dark:bg-slate-800/50 border-l-4 border-indigo-600 dark:border-indigo-400 rounded-r-3xl flex items-center overflow-hidden shadow-sm animate-fade-in">
+        <div v-if="announcement.show" class="turntable-announcement">
             <div class="px-5 text-indigo-600 dark:text-indigo-400">
                 <span class="text-2xl">📢</span>
             </div>
@@ -344,19 +345,19 @@ const Turntable = defineComponent({
             </div>
         </div>
 
-        <div class="flex flex-col lg:flex-row gap-8 transition-all duration-500" :class="isSettingsOpen ? 'items-start' : 'items-center justify-center min-h-[calc(100vh-200px)]'">
+        <div class="turntable-layout-container" :class="isSettingsOpen ? 'items-start' : 'items-center justify-center min-h-[calc(100vh-200px)]'">
           
           <!-- 左側：轉盤區域 -->
-          <div class="flex-1 w-full flex flex-col items-center" ref="containerRef">
-            <div class="turntable-container mb-8 relative flex items-center justify-center">
-              <div class="pointer"></div>
+          <div class="turntable-wheel-section" ref="containerRef">
+            <div class="turntable-container">
+              <div class="turntable-pointer"></div>
               <canvas id="turntableCanvas" ref="canvasRef" class="max-w-full h-auto"></canvas>
               
               <!-- 中心按鈕 -->
               <button 
                 @click="toggleSpin"
-                class="absolute z-10 w-16 h-16 rounded-full flex items-center justify-center shadow-xl transition-all hover:scale-110 active:scale-95 border-4 border-white dark:border-slate-800"
-                :class="isSpinning && !isBraking ? 'bg-red-500 hover:bg-red-600 text-white' : (isBraking ? 'bg-slate-400 text-white cursor-not-allowed' : 'bg-emerald-500 hover:bg-emerald-600 text-white')"
+                class="turntable-spin-btn"
+                :class="isSpinning && !isBraking ? 'turntable-spin-btn-active' : (isBraking ? 'turntable-spin-btn-braking' : 'turntable-spin-btn-ready')"
                 :disabled="isBraking"
               >
                 <!-- Play Icon -->
@@ -386,11 +387,11 @@ const Turntable = defineComponent({
           >
             <div 
               v-if="isSettingsOpen"
-              class="w-full lg:w-96 glass-card p-6 rounded-3xl border border-white/20 shadow-2xl sticky top-8 z-30"
+              class="turntable-settings-panel"
             >
-              <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-black dark:text-white">轉盤設定</h2>
-                <button @click="isSettingsOpen = false" class="hidden lg:block text-slate-900 dark:text-slate-400 hover:text-black dark:hover:text-white transition-colors">
+              <div class="turntable-settings-header">
+                <h2 class="turntable-settings-title">轉盤設定</h2>
+                <button @click="isSettingsOpen = false" class="turntable-settings-close">
                   <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                   </svg>
@@ -398,19 +399,19 @@ const Turntable = defineComponent({
               </div>
               
               <div class="mb-6">
-                <label class="block text-sm font-bold text-slate-900 dark:text-slate-400 mb-3 uppercase tracking-wider">新增獎項</label>
+                <label class="turntable-input-label">新增獎項</label>
                 <div class="flex flex-col gap-3">
                   <input 
                     v-model="newItemText" 
                     type="text" 
                     placeholder="輸入獎項名稱..."
                     @keyup.enter="addPrize"
-                    class="w-full px-4 py-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-slate-900 dark:text-white"
+                    class="turntable-input"
                   />
                   <div class="flex gap-2">
                     <select 
                       v-model="newItemLevel"
-                      class="flex-1 px-4 py-3 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 transition-all text-slate-900 dark:text-white"
+                      class="turntable-select"
                     >
                       <option :value="0">普通獎</option>
                       <option :value="3">三等獎</option>
@@ -419,7 +420,7 @@ const Turntable = defineComponent({
                     </select>
                     <button 
                       @click="addPrize"
-                      class="px-6 py-3 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white rounded-xl font-bold hover:bg-slate-200 dark:hover:bg-black transition-all active:scale-95 shadow-lg shadow-black/10 dark:shadow-black/20"
+                      class="turntable-add-btn"
                     >
                       新增
                     </button>
@@ -428,32 +429,33 @@ const Turntable = defineComponent({
               </div>
   
               <div class="mb-2">
-                <div class="flex justify-between items-center mb-4">
-                  <label class="text-sm font-bold text-slate-900 dark:text-slate-400 uppercase tracking-wider">目前獎項 ({{ prizes.length }})</label>
-                  <button @click="resetToDefault" class="text-xs font-bold text-slate-900 dark:text-slate-100 hover:underline">重置預設</button>
+                <div class="turntable-prize-list-header">
+                  <label class="turntable-prize-list-title">目前獎項 ({{ prizes.length }})</label>
+                  <button @click="resetToDefault" class="turntable-reset-btn">重置預設</button>
                 </div>
                 <div class="max-h-[40vh] lg:max-h-96 overflow-y-auto pr-2 space-y-3 custom-scrollbar">
                   <div v-for="(prize, index) in prizes" :key="index" 
-                       class="flex items-center justify-between p-3 rounded-xl transition-all group border"
+                       class="turntable-prize-item"
                        :class="[
-                         prize.level === 1 ? 'bg-amber-500/10 border-amber-500/50 shadow-[0_0_15px_rgba(245,158,11,0.2)]' : 
-                         prize.level === 2 ? 'bg-slate-400/10 border-slate-400/50' : 
-                         prize.level === 3 ? 'bg-orange-600/10 border-orange-600/50' : 
-                         'bg-white/30 dark:bg-slate-800/30 border-slate-200 dark:border-white/10 hover:border-slate-900/30 dark:hover:border-slate-100/30'
+                         prize.level === 1 ? 'turntable-prize-item-level-1' : 
+                         prize.level === 2 ? 'turntable-prize-item-level-2' : 
+                         prize.level === 3 ? 'turntable-prize-item-level-3' : 
+                         'turntable-prize-item-level-0'
                        ]">
                     <div class="flex items-center gap-3">
-                      <div class="w-5 h-5 rounded-full shadow-inner border border-white/20" :style="{ backgroundColor: prize.color }"></div>
+                      <div class="turntable-prize-color-swatch" :style="{ backgroundColor: prize.color }"></div>
                       <div class="flex flex-col">
-                        <span class="text-sm font-bold" :class="prize.level === 1 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-900 dark:text-slate-200'">{{ prize.text }}</span>
-                        <span v-if="prize.level > 0" :class="['text-[10px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md inline-block w-fit mt-0.5', 
-                                                               prize.level === 1 ? 'bg-amber-500 text-slate-900 dark:text-white' : 
-                                                               prize.level === 2 ? 'bg-slate-400 text-slate-900 dark:text-white' : 
-                                                               'bg-orange-600 text-slate-900 dark:text-white']">
+                        <span class="turntable-prize-text" :class="prize.level === 1 ? 'turntable-prize-text-level-1' : 'turntable-prize-text-normal'">{{ prize.text }}</span>
+                        <span v-if="prize.level > 0" :class="['turntable-prize-badge', 
+                          prize.level === 1 ? 'turntable-prize-badge-level-1' : 
+                          prize.level === 2 ? 'turntable-prize-badge-level-2' : 
+                          'turntable-prize-badge-level-3'
+                        ]">
                           {{ prize.level === 1 ? '一等獎' : prize.level === 2 ? '二等獎' : '三等獎' }}
                         </span>
                       </div>
                     </div>
-                    <button @click="removePrize(index)" class="text-slate-900 dark:text-slate-400 hover:text-red-500 transition-all p-1">
+                    <button @click="removePrize(index)" class="turntable-prize-delete-btn" title="刪除">
                       <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                       </svg>
@@ -479,20 +481,31 @@ const Turntable = defineComponent({
       </div>
 
       <!-- 結果彈窗 -->
-      <div v-if="showResultModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-        <div class="glass-card max-w-sm w-full p-8 rounded-3xl border border-white/20 text-center animate-in fade-in zoom-in duration-300">
-          <div class="text-6xl mb-4">🎉</div>
-          <h3 class="text-2xl font-bold text-black dark:text-white mb-2">恭喜中獎！</h3>
-          <div class="text-4xl font-black text-slate-900 dark:text-slate-100 mb-6">{{ result?.text }}</div>
-          <button 
-            @click="showResultModal = false"
-            class="w-full py-3 bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-white rounded-2xl font-bold hover:bg-slate-200 dark:hover:bg-black transition-colors shadow-lg"
-          >
-            太棒了！
-          </button>
+      <div v-if="showResultModal" class="turntable-modal-overlay bg-black/60">
+        <div class="turntable-modal-content">
+          <div class="text-center">
+            <div class="turntable-modal-icon">🎉</div>
+            <h3 class="turntable-modal-title">恭喜中獎！</h3>
+            <div class="text-4xl font-black text-slate-900 dark:text-slate-100 mb-6">{{ result?.text }}</div>
+            <button 
+              @click="showResultModal = false"
+              class="turntable-modal-close-btn turntable-modal-close-btn-level-0"
+            >
+              太棒了！
+            </button>
+          </div>
         </div>
       </div>
     </LayoutComponent>`
 });
 
-createApp(Turntable).mount('#app');
+const app = createApp(Turntable);
+app.use(PrimeVue, {
+    theme: {
+        preset: Aura,
+        options: {
+            darkModeSelector: '.dark',
+        }
+    }
+});
+app.mount('#app');
