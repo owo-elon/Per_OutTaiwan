@@ -9,7 +9,7 @@ const __dirname = path.dirname(__filename);
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
   const repoName = process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : '';
-  const basePath = repoName && !repoName.endsWith('.github.io') ? `/${repoName}/` : '/';
+  const basePath = repoName ? `/${repoName}/` : '/';
   
   return {
     base: basePath,
