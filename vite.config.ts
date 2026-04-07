@@ -1,6 +1,10 @@
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { defineConfig, loadEnv } from 'vite';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
@@ -16,24 +20,19 @@ export default defineConfig(({ mode }) => {
     resolve: {
       alias: {
         'vue': 'vue/dist/vue.esm-bundler.js',
-        
-        // 2. 修正別名路徑：通常指向 src 或是專案根目錄
-        // 建議確保這裡與你 tsconfig.json 的 paths 一致
         '@': path.resolve(__dirname, './'), 
       },
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
-    // 3. 額外保險：確保 Rollup 知道如何處理 vue
     build: {
       rollupOptions: {
         input: {
           main: path.resolve(__dirname, 'index.html'),
-          takeList: path.resolve(__dirname, 'src/view/takelist/takelist.html'),
+          takelist: path.resolve(__dirname, 'src/view/takelist/takelist.html'),
           turntable: path.resolve(__dirname, 'src/view/turntable/turntable.html'),
         },
-        external: [], // 確保 vue 沒有被意外排除
       }
     }
   };
