@@ -29,9 +29,10 @@ export default defineConfig(({ mode }) => {
     build: {
       rollupOptions: {
         input: {
-          main: path.resolve(__dirname, 'index.html'),
-          takelist: path.resolve(__dirname, 'src/view/takelist/takelist.html'),
-          turntable: path.resolve(__dirname, 'src/view/turntable/turntable.html'),
+          main: 'index.html',
+          takelist: 'src/view/takelist/takelist.html',
+          takeList: 'src/view/takelist/takelist.html',
+          turntable: 'src/view/turntable/turntable.html',
         },
       }
     }
