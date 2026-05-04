@@ -27,13 +27,22 @@ export default defineConfig(({ mode }) => {
       hmr: process.env.DISABLE_HMR !== 'true',
     },
     build: {
+      chunkSizeWarningLimit: 600,
       rollupOptions: {
         input: {
           main: 'index.html',
           takelist: 'src/view/takelist/takelist.html',
-          takeList: 'src/view/takelist/takelist.html',
           turntable: 'src/view/turntable/turntable.html',
         },
+        output: {
+          manualChunks(id) {
+            if (id.includes('node_modules')) {
+              if (id.includes('three')) return 'three';
+              if (id.includes('primevue') || id.includes('vue')) return 'vue-vendor';
+              return 'vendor';
+            }
+          }
+        }
       }
     }
   };
