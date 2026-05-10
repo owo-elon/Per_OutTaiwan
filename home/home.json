@@ -1,0 +1,53 @@
+{
+  "features": [
+    {
+      "id": "packing-list",
+      "title": "打包清單",
+      "description": "出國旅行必備物品清單，幫您輕鬆整理行李",
+      "icon": "🧳",
+      "link": "src/view/takelist/takelist.html",
+      "category": "tool"
+    },
+    {
+      "id": "turntable",
+      "title": "幸運轉盤",
+      "description": "猶豫不決嗎？讓轉盤幫您做決定！支援自定義獎項",
+      "icon": "🎡",
+      "link": "src/view/turntable/turntable.html",
+      "category": "game"
+    },
+    {
+      "id": "itinerary",
+      "title": "行程規劃(開發中)",
+      "description": "智能行程規劃工具，讓您的旅程更完美",
+      "icon": "✈️",
+      "link": "#",
+      "category": "tool"
+    },
+    {
+      "id": "budget",
+      "title": "預算計算(開發中)",
+      "description": "精確的旅行預算管理，掌控每一分錢",
+      "icon": "💰",
+      "link": "#",
+      "category": "tool"
+    }
+  ],
+  "categories": [
+    {
+      "id": "all",
+      "name": "全部項目",
+      "icon": "💠"
+    },
+    {
+      "id": "tool",
+      "name": "實用工具",
+      "icon": "🛠️"
+    },
+    {
+      "id": "game",
+      "name": "趣味遊戲",
+      "icon": "🎮"
+    }
+  ]
+}
