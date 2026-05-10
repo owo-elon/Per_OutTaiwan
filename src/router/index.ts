@@ -2,7 +2,7 @@ export const routes = [
   {
     path: '/',
     name: 'Home',
-    component: 'index.html',
+    component: '/src/view/home/home.html',
     category: 'all'
   },
   {

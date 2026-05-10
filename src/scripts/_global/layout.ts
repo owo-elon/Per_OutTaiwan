@@ -1,4 +1,4 @@
-import '../../css/layout/layout.css';
+import '../../css/_global/layout.css';
 import { defineComponent, ref, onMounted, onUnmounted, watch } from 'vue';
 import * as THREE from 'three';
 import gsap from 'gsap';
@@ -196,17 +196,19 @@ export function initThreeBackground(isDarkMode = false) {
     sunGroup.position.set(0, 180, 0);
     celestialPivot.add(sunGroup);
 
-    // — Sun core: Enhanced shader with more vibrant colors —
+    // — Sun core: Enhanced shader with limb darkening (no egg-yolk center) —
     const sunBodyMat = new THREE.ShaderMaterial({
         uniforms: {
             time: { value: 0.0 },
             colA: { value: new THREE.Color(0xfff200) },  // Bright yellow
             colB: { value: new THREE.Color(0xff8c00) },  // Deep orange
             colC: { value: new THREE.Color(0xff4500) },  // Orange-red
-            globalOpacity: { value: 1.0 }
+            globalOpacity: { value: 1.0 },
+            uFlash: { value: 0.0 }
         },
         vertexShader: /* glsl */`
             uniform float time;
+            uniform float uFlash;
             varying vec2  vUv;
             varying vec3  vNormal;
             varying vec3  vPos;
@@ -234,13 +236,17 @@ export function initThreeBackground(isDarkMode = false) {
                 float n = noise(position * 0.25 + vec3(time * 0.18));
                 float n2= noise(position * 0.55 - vec3(time * 0.12));
                 float disp = (n * 0.8 + n2 * 0.4) * 2.0;
-                vec3 displaced = position + normal * disp;
+                
+                // Flash expansion
+                float expansion = 1.0 + uFlash * 5.0;
+                vec3 displaced = position * expansion + normal * disp;
                 gl_Position = projectionMatrix * modelViewMatrix * vec4(displaced, 1.0);
             }
         `,
         fragmentShader: /* glsl */`
             uniform float time;
             uniform float globalOpacity;
+            uniform float uFlash;
             uniform vec3  colA;
             uniform vec3  colB;
             uniform vec3  colC;
@@ -272,13 +278,20 @@ export function initThreeBackground(isDarkMode = false) {
                 vec3  col = mix(colA, colB, plasma);
                 col = mix(col, colC, pow(plasma, 2.0));
 
-                // Enhanced limb brightness for more vibrant look
-                float facing = dot(normalize(vNormal), vec3(0.0, 0.0, 1.0));
-                col *= 0.7 + 0.4 * max(0.0, facing);
+                // ── Limb darkening: centre stays textured, edge goes orange-red ──
+                // facing=1 at dead centre (normal facing camera), 0 at limb
+                float facing = max(0.0, dot(normalize(vNormal), vec3(0.0, 0.0, 1.0)));
+                // Shift colour toward colC (orange-red) near the limb
+                col = mix(colC * 0.75, col, pow(facing, 0.5));
+                // Slight brightness fall-off toward the limb (realistic darkening)
+                col *= 0.65 + 0.35 * facing;
 
-                // Solar flares
+                // Solar flares — only near the limb so centre stays varied
                 float flare = pow(max(0.0, sin(vUv.x * 30.0 + time * 1.2) * cos(vUv.y * 25.0 - time * 0.8)), 5.0);
-                col += vec3(1.0, 0.95, 0.5) * flare * 0.5;
+                col += vec3(1.0, 0.95, 0.5) * flare * (1.0 - facing) * 0.6;
+
+                // Flash effect: turn white
+                col = mix(col, vec3(1.0), uFlash);
 
                 gl_FragColor = vec4(col, globalOpacity);
             }
@@ -361,14 +374,17 @@ export function initThreeBackground(isDarkMode = false) {
     }));
     sunGroup.add(sunParticles);
 
-    // — Brilliant sun glow sprite —
+    // — Sun glow sprite: hollow centre → light radiates outward, no egg-yolk —
     const glowCanvas = document.createElement('canvas');
     glowCanvas.width = 256; glowCanvas.height = 256;
     const glowCtx = glowCanvas.getContext('2d')!;
     const glowGrad = glowCtx.createRadialGradient(128, 128, 0, 128, 128, 128);
-    glowGrad.addColorStop(0, 'rgba(255, 250, 200, 1)');
-    glowGrad.addColorStop(0.25, 'rgba(255, 240, 180, 0.8)');
-    glowGrad.addColorStop(0.5, 'rgba(255, 230, 160, 0.4)');
+    glowGrad.addColorStop(0, 'rgba(255, 220, 100, 0)');    // centre: fully transparent
+    glowGrad.addColorStop(0.10, 'rgba(255, 230, 120, 0.0)'); // stay transparent near core
+    glowGrad.addColorStop(0.22, 'rgba(255, 220, 100, 0.55)'); // corona starts here
+    glowGrad.addColorStop(0.40, 'rgba(255, 180,  60, 0.35)');
+    glowGrad.addColorStop(0.60, 'rgba(255, 140,  30, 0.18)');
+    glowGrad.addColorStop(0.80, 'rgba(255, 100,  10, 0.07)');
     glowGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
     glowCtx.fillStyle = glowGrad;
     glowCtx.fillRect(0, 0, 256, 256);
@@ -952,6 +968,88 @@ export function initThreeBackground(isDarkMode = false) {
             gsap.to(target.scale, { x: 1.2, y: 1.2, z: 1.2, duration: 0.4, yoyo: true, repeat: 3, ease: 'power2.inOut' });
         },
 
+        flash() {
+            // Blinding sunlight effect - focus on radiance, not flat white
+            gsap.to(sunBodyMat.uniforms.uFlash, { value: 1.0, duration: 1.0, ease: 'power2.in' });
+            // Lower bloom strength to prevent flat white-out
+            gsap.to(bloomPass, { strength: 8.0, duration: 1.5, ease: 'power2.in' });
+
+            // Expand sun rays and sun group dramatically
+            gsap.to(sunGroup.scale, { x: 18, y: 18, z: 18, duration: 1.8, ease: 'power2.in' });
+
+            // Radiant rays expansion with shimmering effect
+            sunRayMats.forEach((mat, i) => {
+                gsap.to(mat, { opacity: 0.8, duration: 0.5 });
+                const ray = sunRayGroup.children[i] as THREE.Mesh;
+                gsap.to(ray.scale, { y: 50, x: 10, duration: 1.5, ease: 'power2.in' });
+                // Add some rotation to the rays for shimmering
+                gsap.to(ray.rotation, { z: ray.rotation.z + Math.PI * 2, duration: 2.5, ease: 'power2.in' });
+            });
+
+            // Add a shimmering rotation to the sun itself
+            gsap.to(sunGroup.rotation, { y: sunGroup.rotation.y + Math.PI * 4, duration: 2.0, ease: 'power2.in' });
+        },
+
+        blackHole() {
+            // Sucked into black hole effect
+            // 1. Turn moon into a pitch black void
+            gsap.to(moonSurfaceMat.color, { r: 0, g: 0, b: 0, duration: 0.3 });
+            gsap.to(moonSurfaceMat, { emissiveIntensity: 0, duration: 0.3 });
+
+            // 2. Expand the black hole to dominate the entire screen
+            gsap.to(moonGroup.scale, { x: 60, y: 60, z: 60, duration: 2.5, ease: 'power3.in' });
+
+            // 3. Accretion disk (halo) - Spin rapidly and expand
+            gsap.to(moonHalo.rotation, { z: moonHalo.rotation.z + Math.PI * 10, duration: 2.0, ease: 'power2.in' });
+            gsap.to(moonHalo.scale, { x: 2.5, y: 2.5, duration: 1.5, ease: 'power2.in' });
+            gsap.to(moonHaloMat, { opacity: 1.0, duration: 0.4 });
+
+            // 4. Vortex sucking effect for particles
+            const pPos = moonDust.geometry.attributes.position;
+            const suckParticles = { t: 0 };
+            gsap.to(suckParticles, {
+                t: 1,
+                duration: 2.0,
+                ease: 'power3.in',
+                onUpdate: () => {
+                    for (let i = 0; i < moonDustCount; i++) {
+                        // Spiral inward
+                        const x = pPos.array[i * 3];
+                        const y = pPos.array[i * 3 + 1];
+                        const z = pPos.array[i * 3 + 2];
+
+                        // Apply rotation
+                        const angle = 0.15;
+                        const newX = x * Math.cos(angle) - z * Math.sin(angle);
+                        const newZ = x * Math.sin(angle) + z * Math.cos(angle);
+
+                        // Pull toward center
+                        pPos.array[i * 3] = newX * 0.94;
+                        pPos.array[i * 3 + 1] = y * 0.94;
+                        pPos.array[i * 3 + 2] = newZ * 0.94;
+                    }
+                    pPos.needsUpdate = true;
+                }
+            });
+
+            // 5. Intense bloom spike then collapse
+            gsap.to(bloomPass, { strength: 15.0, duration: 0.8, ease: 'power2.in' });
+
+            const overlay = document.createElement('div');
+            overlay.style.position = 'fixed';
+            overlay.style.top = '0';
+            overlay.style.left = '0';
+            overlay.style.width = '100%';
+            overlay.style.height = '100%';
+            overlay.style.backgroundColor = 'black';
+            overlay.style.opacity = '0';
+            overlay.style.zIndex = '9999';
+            overlay.style.pointerEvents = 'none';
+            document.body.appendChild(overlay);
+
+            gsap.to(overlay.style, { opacity: '1', duration: 1.8, delay: 0.7, ease: 'power2.in' });
+        },
+
         destroy() {
             window.removeEventListener('resize', onResize);
             renderer.dispose();
@@ -994,6 +1092,14 @@ const LayoutComponent = defineComponent({
         title: {
             type: String,
             default: 'OutTaiwan'
+        },
+        showAnnouncement: {
+            type: Boolean,
+            default: false
+        },
+        announcementText: {
+            type: String,
+            default: '歡迎來到 OutTaiwan！探索台灣的美麗角落。🚀'
         }
     },
     template: `
@@ -1006,7 +1112,7 @@ const LayoutComponent = defineComponent({
         </div>
 
         <div v-cloak class="layout-main-content-wrapper">
-            <div v-if="globalAnnouncement?.show" 
+            <div v-if="globalAnnouncement && globalAnnouncement.show" 
                  class="layout-announcement-overlay">
                 <div class="layout-announcement-card">
                     <div class="layout-announcement-icon-container">
@@ -1038,71 +1144,56 @@ const LayoutComponent = defineComponent({
                 <!-- Menu Items (Collapsible) -->
                 <div v-if="isMenuOpen" class="layout-menu-items">
                     <!-- Home Button -->
-                    <button @click="goToHome(); isMenuOpen = false" 
+                    <button @click.stop="goToHome(); isMenuOpen = false" 
                             class="layout-menu-btn">
-                        <span class="layout-menu-btn-icon">🏠</span>
-                        <span class="layout-menu-btn-tooltip">
+                        <span class="layout-menu-btn-icon pointer-events-none">🏠</span>
+                        <span class="layout-menu-btn-tooltip pointer-events-none">
                             回首頁
                         </span>
                     </button>
 
                     <!-- Back to Top -->
-                    <button @click="scrollToTop(); isMenuOpen = false" 
+                    <button @click.stop="scrollToTop(); isMenuOpen = false" 
                             class="layout-menu-btn">
-                        <span class="layout-menu-btn-icon">⬆️</span>
-                        <span class="layout-menu-btn-tooltip">
+                        <span class="layout-menu-btn-icon pointer-events-none">⬆️</span>
+                        <span class="layout-menu-btn-tooltip pointer-events-none">
                             回到頂端
                         </span>
                     </button>
 
                     <!-- Go Back -->
-                    <button @click="goBack(); isMenuOpen = false" 
+                    <button @click.stop="goBack(); isMenuOpen = false" 
                             class="layout-menu-btn">
-                        <span class="layout-menu-btn-icon">⬅️</span>
-                        <span class="layout-menu-btn-tooltip">
+                        <span class="layout-menu-btn-icon pointer-events-none">⬅️</span>
+                        <span class="layout-menu-btn-tooltip pointer-events-none">
                             上一頁
                         </span>
                     </button>
 
                     <!-- Theme Toggle -->
-                    <button @click="toggleDarkMode(); isMenuOpen = false" 
+                    <button @click.stop="toggleDarkMode(); isMenuOpen = false" 
                             class="layout-menu-btn">
-                        <span v-if="isDarkMode" class="layout-menu-btn-icon">☀️</span>
-                        <span v-else class="layout-menu-btn-icon">🌙</span>
-                        <span class="layout-menu-btn-tooltip">
+                        <span v-if="isDarkMode" class="layout-menu-btn-icon pointer-events-none">☀️</span>
+                        <span v-else class="layout-menu-btn-icon pointer-events-none">🌙</span>
+                        <span class="layout-menu-btn-tooltip pointer-events-none">
                             {{ isDarkMode ? '切換亮色模式' : '切換深色模式' }}
                         </span>
                     </button>
                 </div>
 
                 <!-- Main Menu Toggle Button -->
-                <button @click="isMenuOpen = !isMenuOpen" 
+                <button @click.stop="isMenuOpen = !isMenuOpen" 
                         class="layout-main-menu-toggle">
                     <!-- Glow effect for dark mode -->
-                    <div class="layout-main-menu-glow"></div>
+                    <div class="layout-main-menu-glow pointer-events-none"></div>
                     
-                    <svg v-if="!isMenuOpen" xmlns="http://www.w3.org/2000/svg" class="layout-main-menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg v-if="!isMenuOpen" xmlns="http://www.w3.org/2000/svg" class="layout-main-menu-icon pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
                     </svg>
-                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="layout-main-menu-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="layout-main-menu-icon pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
-            </div>
-
-            <!-- Running Dog -->
-            <div class="running-dog" v-if="dogActive" :style="dogStyle">
-                <span class="dog-emoji">🐕</span>
-                <div class="dog-dust"></div>
-            </div>
-
-            <!-- Peeking Animal / Spotlight -->
-            <div class="peek-container" :style="peekStyle" :class="{ 'active': peekingActive }">
-                <span v-if="!isDarkMode" class="peek-icon">🐱</span>
-                <div v-else class="spotlight-wrapper">
-                    <span class="flashlight-icon">🔦</span>
-                    <div class="spotlight-beam"></div>
-                </div>
             </div>
 
             <!-- Bottom Left Content Slot (For Category Selector, Weather, etc.) -->
@@ -1119,25 +1210,16 @@ const LayoutComponent = defineComponent({
         const initialDarkMode = typeof window !== 'undefined' ? localStorage.getItem('darkMode') === 'true' : false;
         const isDarkMode = ref(initialDarkMode);
         const isMenuOpen = ref(false);
-        const dogActive = ref(false);
-        const birdActive = ref(false);
-        const peekingActive = ref(false);
-        const globalAnnouncement = ref({ show: false, message: '' });
 
-        const triggerAnimal = (activeState: any, styleObject: any, offset: number, baseDuration: number) => {
-            if (activeState.value) return;
-            const fromLeft = Math.random() > 0.5;
-            const screenWidth = window.innerWidth;
-            styleObject.value.left = fromLeft ? `-${offset}px` : `${screenWidth + offset}px`;
-            styleObject.value.transform = fromLeft ? 'scaleX(-1)' : 'scaleX(1)';
-            activeState.value = true;
-            gsap.to(styleObject.value, {
-                left: fromLeft ? `${screenWidth + offset}px` : `-${offset}px`,
-                duration: baseDuration + Math.random() * 2,
-                ease: 'power1.inOut',
-                onComplete: () => { activeState.value = false; }
-            });
-        };
+        const globalAnnouncement = ref({ show: props.showAnnouncement, message: props.announcementText });
+
+        watch(() => props.showAnnouncement, (newVal) => {
+            globalAnnouncement.value.show = newVal;
+        });
+
+        watch(() => props.announcementText, (newVal) => {
+            globalAnnouncement.value.message = newVal;
+        });
 
         const toggleDarkMode = () => {
             isDarkMode.value = !isDarkMode.value;
@@ -1147,17 +1229,6 @@ const LayoutComponent = defineComponent({
         const goToHome = () => { window.location.href = import.meta.env.BASE_URL + 'index.html'; };
         const scrollToTop = () => { window.scrollTo({ top: 0, behavior: 'smooth' }); };
         const goBack = () => { window.history.back(); };
-
-        const fetchGlobalAnnouncement = async () => {
-            try {
-                const response = await fetch(`${import.meta.env.BASE_URL}announcements.json?t=${Date.now()}`);
-                if (!response.ok) throw new Error('Global fetch failed');
-                const data = await response.json();
-                if (data.global) globalAnnouncement.value = data.global;
-            } catch (error) {
-                console.error('Failed to fetch global announcement:', error);
-            }
-        };
 
         const handleGlobalClick = (e: MouseEvent) => {
             createParticles(e.clientX, e.clientY, isDarkMode.value ? '#94a3b8' : '#0f172a');
@@ -1189,16 +1260,14 @@ const LayoutComponent = defineComponent({
                 }, 50);
             }
 
-            fetchGlobalAnnouncement();
-
             window.addEventListener('click', handleGlobalClick);
             window.addEventListener('scroll', handleScroll, { passive: true });
-        });
 
-        onUnmounted(() => {
-            window.removeEventListener('click', handleGlobalClick);
-            window.removeEventListener('scroll', handleScroll);
-            if (threeBg) threeBg.destroy();
+            onUnmounted(() => {
+                window.removeEventListener('click', handleGlobalClick);
+                window.removeEventListener('scroll', handleScroll);
+                if (threeBg) threeBg.destroy();
+            });
         });
 
         watch(() => props.title, (newTitle) => { document.title = newTitle; });
@@ -1208,7 +1277,7 @@ const LayoutComponent = defineComponent({
         });
 
         return {
-            isDarkMode, isMenuOpen, dogActive, birdActive, peekingActive,
+            isDarkMode, isMenuOpen,
             globalAnnouncement, toggleDarkMode, goToHome, scrollToTop, goBack
         };
     }

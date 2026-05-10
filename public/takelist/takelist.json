@@ -1,0 +1,142 @@
+{
+  "countries": {
+    "korea": { "name": "韓國", "flag": "🇰🇷", "implemented": true },
+    "japan": { "name": "日本", "flag": "🇯🇵", "implemented": true },
+    "thailand": { "name": "泰國", "flag": "🇹🇭", "implemented": false },
+    "usa": { "name": "美國", "flag": "🇺🇸", "implemented": false },
+    "europe": { "name": "歐洲", "flag": "🇪🇺", "implemented": false }
+  },
+  "defaultItems": {
+    "must": [
+      { "id": "m1", "name": "護照", "checked": false },
+      { "id": "m2", "name": "手機", "checked": false },
+      { "id": "m3", "name": "錢包", "checked": false },
+      { "id": "m4", "name": "信用卡", "checked": false },
+      { "id": "m5", "name": "網路卡/ESIM", "checked": false },
+      { "id": "m6", "name": "錢(台幣/外幣)", "checked": false }
+    ],
+    "categories": [
+      {
+        "name": "其他重要物品",
+        "icon": "💼",
+        "items": [
+          { "id": "i1", "name": "登機證(可以申請記得先申請)", "checked": false },
+          { "id": "i2", "name": "證件(身分證 健保卡)", "checked": false },
+          { "id": "i3", "name": "行動電源", "checked": false },
+          { "id": "i4", "name": "雨傘", "checked": false },
+          { "id": "i5", "name": "萬國轉接頭", "checked": false },
+          { "id": "i6", "name": "充電頭2顆", "checked": false },
+          { "id": "i7", "name": "充電線2條(記得拿一條跟行動電源放一起)", "checked": false },
+          { "id": "jp1", "name": "Visit Japan Web (VJW) QR Code", "checked": false, "country": "japan" },
+          { "id": "jp2", "name": "西瓜卡/ICOCA (實體卡或綁定手機)", "checked": false, "country": "japan" },
+          { "id": "jp3", "name": "日幣現金 (部分店家只收現金)", "checked": false, "country": "japan" }
+        ]
+      },
+      {
+        "name": "包包",
+        "icon": "🎒",
+        "items": [
+          { "id": "b1", "name": "後背包", "checked": false },
+          { "id": "b2", "name": "側背包", "checked": false },
+          { "id": "b3", "name": "收納腰包", "checked": false },
+          { "id": "b4", "name": "行李替大~包 (掛行李箱上那個)", "checked": false },
+          { "id": "b5", "name": "壓縮袋", "checked": false }
+        ]
+      },
+      {
+        "name": "衣物",
+        "icon": "👕",
+        "items": [
+          { "id": "c1", "name": "衣服(記得帶睡衣) [幾夜]", "checked": false },
+          { "id": "c2", "name": "褲子(記得帶睡褲) [幾夜]", "checked": false },
+          { "id": "c3", "name": "內褲 [幾天]", "checked": false },
+          { "id": "c4", "name": "內衣 [幾天]", "checked": false },
+          { "id": "c5", "name": "襪子 [幾天]", "checked": false },
+          { "id": "c6", "name": "拖鞋/涼鞋/布鞋", "checked": false },
+          { "id": "c7", "name": "外套", "checked": false },
+          { "id": "c8", "name": "帽子", "checked": false }
+        ]
+      },
+      {
+        "name": "盥洗用品",
+        "icon": "🧴",
+        "items": [
+          { "id": "t1", "name": "牙刷牙膏", "checked": false },
+          { "id": "t2", "name": "洗面乳", "checked": false },
+          { "id": "t3", "name": "護髮乳", "checked": false },
+          { "id": "t4", "name": "洗臉巾", "checked": false },
+          { "id": "t5", "name": "隱形眼鏡+清洗液", "checked": false },
+          { "id": "t6", "name": "髒衣袋", "checked": false },
+          { "id": "t7", "name": "壓縮毛巾", "checked": false },
+          { "id": "t8", "name": "牙籤", "checked": false },
+          { "id": "t9", "name": "頸枕", "checked": false },
+          { "id": "t10", "name": "眼罩", "checked": false },
+          { "id": "t11", "name": "耳塞", "checked": false }
+        ]
+      },
+      {
+        "name": "文具用品/3C/備品",
+        "icon": "📱",
+        "items": [
+          { "id": "s1", "name": "小剪刀(記得丟行李箱)", "checked": false },
+          { "id": "s2", "name": "膠帶", "checked": false },
+          { "id": "s3", "name": "筆", "checked": false },
+          { "id": "s4", "name": "耳機", "checked": false },
+          { "id": "s5", "name": "自拍棒", "checked": false },
+          { "id": "s6", "name": "絕緣膠帶", "checked": false },
+          { "id": "s7", "name": "飲料提袋", "checked": false },
+          { "id": "s8", "name": "環保袋", "checked": false },
+          { "id": "s9", "name": "衛生紙", "checked": false },
+          { "id": "s10", "name": "濕紙巾", "checked": false },
+          { "id": "s11", "name": "垃圾袋", "checked": false }
+        ]
+      },
+      {
+        "name": "藥品",
+        "icon": "💊",
+        "items": [
+          { "id": "p1", "name": "小護士", "checked": false },
+          { "id": "p2", "name": "防蚊液", "checked": false },
+          { "id": "p3", "name": "木瓜霜", "checked": false },
+          { "id": "p4", "name": "生理食鹽水", "checked": false },
+          { "id": "p5", "name": "眼藥水", "checked": false },
+          { "id": "p6", "name": "止痛藥", "checked": false },
+          { "id": "p7", "name": "ok蹦", "checked": false },
+          { "id": "p8", "name": "棉花棒", "checked": false }
+        ]
+      },
+      {
+        "name": "化妝品",
+        "icon": "💄",
+        "items": [
+          { "id": "mk1", "name": "防曬", "checked": false },
+          { "id": "mk2", "name": "粉底液+刀", "checked": false },
+          { "id": "mk3", "name": "粉餅+海綿", "checked": false },
+          { "id": "mk4", "name": "定妝液", "checked": false },
+          { "id": "mk5", "name": "定妝粉", "checked": false },
+          { "id": "mk6", "name": "腮紅", "checked": false },
+          { "id": "mk7", "name": "眼影+刷具", "checked": false },
+          { "id": "mk8", "name": "眉粉", "checked": false },
+          { "id": "mk9", "name": "眼線筆", "checked": false },
+          { "id": "mk10", "name": "睫毛膏+夾", "checked": false },
+          { "id": "mk11", "name": "口紅", "checked": false },
+          { "id": "mk12", "name": "卸妝水+巾", "checked": false },
+          { "id": "mk13", "name": "梳子", "checked": false },
+          { "id": "mk14", "name": "髮油", "checked": false },
+          { "id": "mk15", "name": "香水", "checked": false },
+          { "id": "mk16", "name": "髮圈", "checked": false },
+          { "id": "mk17", "name": "鏡子", "checked": false }
+        ]
+      },
+      {
+        "name": "保養品",
+        "icon": "✨",
+        "items": [
+          { "id": "sk1", "name": "化妝水", "checked": false },
+          { "id": "sk2", "name": "蘆薈膠", "checked": false },
+          { "id": "sk3", "name": "乳液", "checked": false }
+        ]
+      }
+    ]
+  }
+}

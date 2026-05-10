@@ -1,9 +1,9 @@
 import { createApp, defineComponent, ref, reactive, computed, onMounted, watch, onUnmounted, nextTick } from 'vue';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
-import { LayoutComponent, createParticles } from '../../layout/layout';
-import '../../../css/index.css';
-import '../../../css/takelist/takelist.css';
+import { LayoutComponent, createParticles } from '../_global/layout';
+import '../../css/_global/index.css';
+import '../../css/takelist/takelist.css';
 
 const TakeList = defineComponent({
   name: 'TakeList',
@@ -11,6 +11,9 @@ const TakeList = defineComponent({
     LayoutComponent
   },
   setup() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const enableStarAtlasDesktop = urlParams.has('staratlas');
+    
     const isMobile = typeof window !== 'undefined' ? window.innerWidth < 768 : false;
     const currentStep = ref(1);
     const selectedCountry = ref('');
@@ -62,153 +65,23 @@ const TakeList = defineComponent({
     
     const isDark = ref(localStorage.getItem('darkMode') === 'true');
 
-    const announcementConfig = ref({
-      countries: {} as any,
-      global: { show: false, message: '' }
-    });
+    const countries = ref<any>({});
+    const defaultItems = ref<any>({ must: [], categories: [] });
 
-    const currentCountryAnnouncement = computed(() => {
-      if (!selectedCountry.value || !announcementConfig.value.countries) return null;
-      return announcementConfig.value.countries[selectedCountry.value] || null;
-    });
-
-    const countries = {
-      korea: { name: '韓國', flag: '🇰🇷', implemented: true },
-      japan: { name: '日本', flag: '🇯🇵', implemented: false },
-      thailand: { name: '泰國', flag: '🇹🇭', implemented: false },
-      usa: { name: '美國', flag: '🇺🇸', implemented: false },
-      europe: { name: '歐洲', flag: '🇪🇺', implemented: false }
-    };
-
-    const defaultItems = {
-      must: [
-        { id: 'm1', name: '護照', checked: false },
-        { id: 'm2', name: '手機', checked: false },
-        { id: 'm3', name: '錢包', checked: false },
-        { id: 'm4', name: '信用卡', checked: false },
-        { id: 'm5', name: '網路卡/ESIM', checked: false },
-        { id: 'm6', name: '錢(台幣/外幣)', checked: false }
-      ],
-      categories: [
-        {
-          name: '其他重要物品',
-          icon: '💼',
-          items: [
-            { id: 'i1', name: '登機證(可以申請記得先申請)', checked: false },
-            { id: 'i2', name: '證件(身分證 健保卡)', checked: false },
-            { id: 'i3', name: '行動電源', checked: false },
-            { id: 'i4', name: '雨傘', checked: false },
-            { id: 'i5', name: '萬國轉接頭', checked: false },
-            { id: 'i6', name: '充電頭2顆', checked: false },
-            { id: 'i7', name: '充電線2條(記得拿一條跟行動電源放一起)', checked: false }
-          ]
-        },
-        {
-          name: '包包',
-          icon: '🎒',
-          items: [
-            { id: 'b1', name: '後背包', checked: false },
-            { id: 'b2', name: '側背包', checked: false },
-            { id: 'b3', name: '收納腰包', checked: false },
-            { id: 'b4', name: '行李替大~包 (掛行李箱上那個)', checked: false },
-            { id: 'b5', name: '壓縮袋', checked: false }
-          ]
-        },
-        {
-          name: '衣物',
-          icon: '👕',
-          items: [
-            { id: 'c1', name: '衣服(記得帶睡衣) [幾夜]', checked: false },
-            { id: 'c2', name: '褲子(記得帶睡褲) [幾夜]', checked: false },
-            { id: 'c3', name: '內褲 [幾天]', checked: false },
-            { id: 'c4', name: '內衣 [幾天]', checked: false },
-            { id: 'c5', name: '襪子 [幾天]', checked: false },
-            { id: 'c6', name: '拖鞋/涼鞋/布鞋', checked: false },
-            { id: 'c7', name: '外套', checked: false },
-            { id: 'c8', name: '帽子', checked: false }
-          ]
-        },
-        {
-          name: '盥洗用品',
-          icon: '🧴',
-          items: [
-            { id: 't1', name: '牙刷牙膏', checked: false },
-            { id: 't2', name: '洗面乳', checked: false },
-            { id: 't3', name: '護髮乳', checked: false },
-            { id: 't4', name: '洗臉巾', checked: false },
-            { id: 't5', name: '隱形眼鏡+清洗液', checked: false },
-            { id: 't6', name: '髒衣袋', checked: false },
-            { id: 't7', name: '壓縮毛巾', checked: false },
-            { id: 't8', name: '牙籤', checked: false },
-            { id: 't9', name: '頸枕', checked: false },
-            { id: 't10', name: '眼罩', checked: false },
-            { id: 't11', name: '耳塞', checked: false }
-          ]
-        },
-        {
-          name: '文具用品/3C/備品',
-          icon: '📱',
-          items: [
-            { id: 's1', name: '小剪刀(記得丟行李箱)', checked: false },
-            { id: 's2', name: '膠帶', checked: false },
-            { id: 's3', name: '筆', checked: false },
-            { id: 's4', name: '耳機', checked: false },
-            { id: 's5', name: '自拍棒', checked: false },
-            { id: 's6', name: '絕緣膠帶', checked: false },
-            { id: 's7', name: '飲料提袋', checked: false },
-            { id: 's8', name: '環保袋', checked: false },
-            { id: 's9', name: '衛生紙', checked: false },
-            { id: 's10', name: '濕紙巾', checked: false },
-            { id: 's11', name: '垃圾袋', checked: false }
-          ]
-        },
-        {
-          name: '藥品',
-          icon: '💊',
-          items: [
-            { id: 'p1', name: '小護士', checked: false },
-            { id: 'p2', name: '防蚊液', checked: false },
-            { id: 'p3', name: '木瓜霜', checked: false },
-            { id: 'p4', name: '生理食鹽水', checked: false },
-            { id: 'p5', name: '眼藥水', checked: false },
-            { id: 'p6', name: '止痛藥', checked: false },
-            { id: 'p7', name: 'ok蹦', checked: false },
-            { id: 'p8', name: '棉花棒', checked: false }
-          ]
-        },
-        {
-          name: '化妝品',
-          icon: '💄',
-          items: [
-            { id: 'mk1', name: '防曬', checked: false },
-            { id: 'mk2', name: '粉底液+刀', checked: false },
-            { id: 'mk3', name: '粉餅+海綿', checked: false },
-            { id: 'mk4', name: '定妝液', checked: false },
-            { id: 'mk5', name: '定妝粉', checked: false },
-            { id: 'mk6', name: '腮紅', checked: false },
-            { id: 'mk7', name: '眼影+刷具', checked: false },
-            { id: 'mk8', name: '眉粉', checked: false },
-            { id: 'mk9', name: '眼線筆', checked: false },
-            { id: 'mk10', name: '睫毛膏+夾', checked: false },
-            { id: 'mk11', name: '口紅', checked: false },
-            { id: 'mk12', name: '卸妝水+巾', checked: false },
-            { id: 'mk13', name: '梳子', checked: false },
-            { id: 'mk14', name: '髮油', checked: false },
-            { id: 'mk15', name: '香水', checked: false },
-            { id: 'mk16', name: '髮圈', checked: false },
-            { id: 'mk17', name: '鏡子', checked: false }
-          ]
-        },
-        {
-          name: '保養品',
-          icon: '✨',
-          items: [
-            { id: 'sk1', name: '化妝水', checked: false },
-            { id: 'sk2', name: '蘆薈膠', checked: false },
-            { id: 'sk3', name: '乳液', checked: false }
-          ]
+    const fetchTakelistData = async () => {
+      try {
+        const url = `${import.meta.env.BASE_URL}takelist/takelist.json`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          countries.value = data.countries || {};
+          defaultItems.value = data.defaultItems || { must: [], categories: [] };
+        } else {
+          console.error("Fetch failed with status:", response.status);
         }
-      ]
+      } catch (e) {
+        console.error('Failed to load takelist data', e);
+      }
     };
 
     const mustItems = computed(() => {
@@ -223,7 +96,7 @@ const TakeList = defineComponent({
       const cats = [];
       const otherItems = packingList.filter(item => !item.isMust);
       
-      defaultItems.categories.forEach(defCat => {
+      defaultItems.value.categories.forEach(defCat => {
         let items = otherItems.filter(item => item.category === defCat.name);
         
         if (items.length > 0) {
@@ -421,9 +294,9 @@ const TakeList = defineComponent({
       });
     });
 
-    onMounted(() => {
+    onMounted(async () => {
+      await fetchTakelistData();
       loadState();
-      fetchAnnouncements();
       fetchWeather();
       
       observer.observe(document.body, { attributes: true });
@@ -477,22 +350,71 @@ const TakeList = defineComponent({
       const absOffset = Math.abs(offset);
       
       // Carousel parameters
-      const isMobile = window.innerWidth < 768;
-      const spacing = isMobile ? 85 : 110; 
-      const scale = Math.max(0.7, 1 - absOffset * 0.15);
-      const opacity = Math.max(0, 1 - absOffset * 0.6);
-      const rotateY = offset * -35; 
-      const translateZ = absOffset * -400; 
-      const translateX = offset * (spacing * 1.2);
+      // Only use Star Atlas layout on desktop if the URL parameter ?staratlas is provided
+      const isDesktop = window.innerWidth >= 768 && enableStarAtlasDesktop;
       
-      return {
-        transform: `translateX(${translateX}%) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
-        opacity: opacity,
-        zIndex: Math.round(40 - absOffset * 10),
-        pointerEvents: absOffset < 2.5 ? 'auto' : 'none',
-        visibility: opacity < 0.01 ? 'hidden' : 'visible',
-        filter: `blur(${absOffset * 2}px)`
-      };
+      if (isDesktop) {
+        // Star Atlas Roadmap Style: Alternating Left/Right Track
+        const side = index % 2 === 0 ? 1 : -1;
+        const laneWidth = 180; // px
+        
+        // Target offset mapping (similar to ThreeCarousel diff)
+        const diff = offset; // offset is relative distance to camera
+        
+        const rotateY = side * -5;
+        
+        // Responsive scaling to prevent empty space
+        let baseScale = 1.2;
+        let finalLaneWidth = laneWidth;
+        if (window.innerWidth >= 1600) {
+          baseScale = 1.6;
+          finalLaneWidth = laneWidth * 1.3;
+        } else if (window.innerWidth >= 1200) {
+          baseScale = 1.4;
+          finalLaneWidth = laneWidth * 1.15;
+        }
+        
+        const translateX = side * finalLaneWidth;
+        const translateZ = 100 - diff * 250; // Z-depth push
+        const scale = baseScale;
+        
+        let opacity = 0;
+        let blur = 0;
+        if (diff >= 0) {
+          opacity = Math.max(0, 1 - diff * 0.3); // deep visibility
+          blur = diff * 1.5;
+        } else {
+          opacity = Math.max(0, 1 + diff * 1.5); // rapid fade moving past camera
+          blur = Math.abs(diff) * 4.0;
+        }
+
+        return {
+          transform: `translateX(${translateX}px) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+          opacity: opacity,
+          zIndex: Math.round(40 - diff * 10),
+          pointerEvents: Math.abs(diff) < 0.5 ? 'auto' : 'none',
+          visibility: opacity < 0.01 ? 'hidden' : 'visible',
+          filter: `blur(${blur}px)`
+        };
+      } else {
+        // Mobile circular layout
+        const spacing = 85; 
+        const mobileBaseScale = window.innerWidth > 400 ? 1.1 : 0.9;
+        const scale = mobileBaseScale * Math.max(0.7, 1 - absOffset * 0.15);
+        const opacity = Math.max(0, 1 - absOffset * 0.6);
+        const rotateY = offset * -35; 
+        const translateZ = absOffset * -400; 
+        const translateX = offset * (spacing * 1.2);
+        
+        return {
+          transform: `translateX(${translateX}%) translateZ(${translateZ}px) rotateY(${rotateY}deg) scale(${scale})`,
+          opacity: opacity,
+          zIndex: Math.round(40 - absOffset * 10),
+          pointerEvents: absOffset < 0.5 ? 'auto' : 'none',
+          visibility: opacity < 0.01 ? 'hidden' : 'visible',
+          filter: `blur(${absOffset * 2}px)`
+        };
+      }
     };
 
     const toggleCategory = (name: string) => {
@@ -505,7 +427,7 @@ const TakeList = defineComponent({
 
     const selectCountry = (key, event) => {
       createParticles(event.clientX, event.clientY, '#10b981');
-      if (!countries[key].implemented) {
+      if (!countries.value[key].implemented) {
         alert('此國家清單即將推出！目前請選擇韓國 🇰🇷');
         return;
       }
@@ -597,14 +519,14 @@ const TakeList = defineComponent({
       }
 
       // Add Must items
-      defaultItems.must.forEach(item => {
+      defaultItems.value.must.forEach(item => {
         if (!deletedItemIds.value.includes(item.id)) {
           list.push({ ...item, isMust: true, category: '🚨 絕對不能忘記' });
         }
       });
 
       // Add Category items
-      defaultItems.categories.forEach(cat => {
+      defaultItems.value.categories.forEach(cat => {
         cat.items.forEach(item => {
           // Filter by gender
           if ('gender' in item && item.gender !== selectedGender.value) return;
@@ -781,23 +703,6 @@ const TakeList = defineComponent({
       return '☁️';
     };
 
-    const fetchAnnouncements = async () => {
-      try {
-        const response = await fetch(`${import.meta.env.BASE_URL}announcements.json?t=${Date.now()}`);
-        if (!response.ok) throw new Error('Fetch failed');
-        const data = await response.json();
-        
-        if (data) {
-          announcementConfig.value = {
-            countries: data.countries || {},
-            global: data.global || { show: false, message: '' }
-          };
-        }
-      } catch (error) {
-        console.error('無法載入公告資訊:', error);
-      }
-    };
-
     watch(isHeaderExpanded, (newVal) => {
       if (newVal) {
         mustItemsExpanded.value = false;
@@ -849,8 +754,6 @@ const TakeList = defineComponent({
       totalCount,
       packedCount,
       progressPercent,
-      announcementConfig,
-      currentCountryAnnouncement,
       isHeaderExpanded,
       isLeftMenuOpen,
       isSearchPanelOpen,
@@ -885,28 +788,6 @@ const TakeList = defineComponent({
   },
   template: `
     <LayoutComponent title="OutTaiwan - 打包清單">
-        <!-- Country Announcement (Overlay) -->
-        <div v-if="currentCountryAnnouncement && currentCountryAnnouncement.show" 
-             class="takelist-announcement-overlay">
-            <div class="takelist-announcement-banner">
-                <div class="px-4 text-indigo-600 dark:text-indigo-400">
-                    <span class="text-xl">📢</span>
-                </div>
-                <div class="marquee-container flex-1 py-1">
-                    <p class="marquee-content text-slate-900 dark:text-slate-100 font-black text-sm md:text-base">
-                        {{ currentCountryAnnouncement.message }}
-                        <span class="inline-block w-20"></span>
-                        {{ currentCountryAnnouncement.message }}
-                    </p>
-                </div>
-                <button @click="currentCountryAnnouncement.show = false" class="px-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                </button>
-            </div>
-        </div>
-
         <template #bottom-left>
             <div class="flex flex-col-reverse items-start gap-4 left-menu-container" v-if="currentStep === 3">
                 <!-- Left Menu Toggle Button -->
@@ -990,7 +871,7 @@ const TakeList = defineComponent({
         </template>
 
         <!-- Step 1: Select Country -->
-        <div v-if="currentStep === 1" class="takelist-step-wrapper h-full overflow-y-auto pt-8 pb-20 px-4">
+        <div v-if="currentStep === 1" class="takelist-step-wrapper h-full overflow-y-auto no-scrollbar pt-8 pb-20 px-4">
             <div class="step-container w-full max-w-4xl mx-auto">
                 <h2 class="text-3xl font-black text-center mb-12 text-slate-900 dark:text-white">請選擇目的地</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -1006,7 +887,7 @@ const TakeList = defineComponent({
         </div>
 
         <!-- Step 2: Select Gender -->
-        <div v-if="currentStep === 2" class="takelist-step-wrapper h-full overflow-y-auto pt-8 pb-20 px-4">
+        <div v-if="currentStep === 2" class="takelist-step-wrapper h-full overflow-y-auto no-scrollbar pt-8 pb-20 px-4">
             <div class="step-container w-full max-w-3xl mx-auto">
                 <h2 class="text-3xl font-black text-center mb-12 text-slate-900 dark:text-white">請選擇性別</h2>
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-12">
@@ -1023,9 +904,9 @@ const TakeList = defineComponent({
         </div>
 
         <!-- Step 3: Packing List -->
-        <div v-if="currentStep === 3" class="takelist-step-wrapper h-full pt-2 pb-16 px-2" :class="isHeaderExpanded ? 'overflow-y-auto' : 'overflow-hidden'">
+        <div v-if="currentStep === 3" class="takelist-step-wrapper h-full pt-2 pb-16 px-2" :class="isHeaderExpanded ? 'overflow-y-auto no-scrollbar' : 'overflow-hidden'">
             <!-- Header & Progress -->
-            <div class="takelist-header-card !mb-2"
+            <div class="takelist-header-card !mb-6"
                  :class="[
                     mustItems.some(i => !i.checked) 
                     ? 'border-red-500 animate-warning-flash' 

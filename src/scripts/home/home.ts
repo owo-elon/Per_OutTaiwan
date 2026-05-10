@@ -1,16 +1,14 @@
-import { createApp, defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
 import PrimeVue from 'primevue/config';
 import Aura from '@primevue/themes/aura';
-import { LayoutComponent } from '../layout/layout';
-import { ThreeCarousel, CarouselItem } from './threecarousel';
-import '../../css/index.css';
-import '../../css/home.css';
 
-const Home = defineComponent({
+import { createApp, defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
+import { LayoutComponent } from '../_global/layout';
+import { ThreeCarousel, CarouselItem } from '../_global/threecarousel';
+import '../../css/_global/index.css';
+import '../../css/home/home.css';
+
+const _HomeObj = {
   name: 'Home',
-  components: {
-    LayoutComponent
-  },
   setup() {
     const carouselContainer = ref<HTMLElement | null>(null);
     let carousel: ThreeCarousel | null = null;
@@ -19,56 +17,38 @@ const Home = defineComponent({
     const selectedCategory = ref('all');
     const isCategoryMenuOpen = ref(false);
 
-    const features: CarouselItem[] = [
-      {
-        id: 'packing-list',
-        title: '打包清單',
-        description: '出國旅行必備物品清單，幫您輕鬆整理行李',
-        icon: '🧳',
-        link: `${import.meta.env.BASE_URL}src/view/takelist/takelist.html`,
-        category: 'tool'
-      },
-      {
-        id: 'turntable',
-        title: '幸運轉盤',
-        description: '猶豫不決嗎？讓轉盤幫您做決定！支援自定義獎項',
-        icon: '🎡',
-        link: `${import.meta.env.BASE_URL}src/view/turntable/turntable.html`,
-        category: 'game'
-      },
-      {
-        id: 'itinerary',
-        title: '行程規劃',
-        description: '即將推出：智能行程規劃工具，讓您的旅程更完美',
-        icon: '✈️',
-        link: '#',
-        category: 'tool'
-      },
-      {
-        id: 'budget',
-        title: '預算計算',
-        description: '即將推出：精確的旅行預算管理，掌控每一分錢',
-        icon: '💰',
-        link: '#',
-        category: 'tool'
-      }
-    ];
+    const features = ref<CarouselItem[]>([]);
+    const categories = ref<any[]>([]);
 
-    const categories = [
-      { id: 'all', name: '全部項目', icon: '💠' },
-      { id: 'tool', name: '實用工具', icon: '🛠️' },
-      { id: 'game', name: '趣味遊戲', icon: '🎮' }
-    ];
+    const loadHomeData = async () => {
+      try {
+        const url = `${import.meta.env.BASE_URL}home/home.json`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          features.value = data.features || [];
+          categories.value = data.categories || [];
+
+          // Initialize carousel after data is loaded
+          initCarousel();
+        } else {
+          console.error("Fetch failed with status:", response.status);
+        }
+      } catch (e) {
+        console.error('Failed to load home data', e);
+      }
+    };
 
     const filteredFeatures = computed(() => {
-      return features; // Do not filter, always show all
+      return features.value; // Do not filter, always show all
     });
 
-    onMounted(() => {
-      if (carouselContainer.value) {
-        carousel = new ThreeCarousel(carouselContainer.value, features, isDark.value, (item) => {
+    const initCarousel = () => {
+      if (carouselContainer.value && features.value.length > 0) {
+        carousel = new ThreeCarousel(carouselContainer.value, features.value, isDark.value, (item) => {
           if (item.link !== '#') {
-            window.location.href = item.link;
+            // Use router for navigation instead of direct href if possible, but since it's MPA, we use href
+            window.location.href = `${import.meta.env.BASE_URL}${item.link}`;
           } else {
             activeItem.value = item;
             setTimeout(() => {
@@ -77,6 +57,10 @@ const Home = defineComponent({
           }
         });
       }
+    };
+
+    onMounted(() => {
+      loadHomeData();
 
       // Watch for category changes to rotate
       watch(selectedCategory, (newCat) => {
@@ -84,7 +68,7 @@ const Home = defineComponent({
           if (newCat === 'all') {
             carousel.rotateToIndex(0);
           } else {
-            const index = features.findIndex(f => f.category === newCat);
+            const index = features.value.findIndex(f => f.category === newCat);
             if (index !== -1) {
               carousel.rotateToIndex(index);
             }
@@ -113,11 +97,16 @@ const Home = defineComponent({
           isCategoryMenuOpen.value = false;
         }
       };
+      const handleScroll = () => {
+        isCategoryMenuOpen.value = false;
+      };
       window.addEventListener('click', closeMenus);
+      window.addEventListener('scroll', handleScroll, { passive: true });
 
       onUnmounted(() => {
         observer.disconnect();
         window.removeEventListener('click', closeMenus);
+        window.removeEventListener('scroll', handleScroll);
         if (carousel) {
           carousel.destroy();
         }
@@ -141,23 +130,23 @@ const Home = defineComponent({
     };
   },
   template: `
-    <LayoutComponent title="elon Tools">
+    <LayoutComponent title="elon Tools" :show-announcement="false">
       <template #bottom-left>
         <!-- Category Selector -->
         <div class="home-category-container">
           <!-- Toggle Button -->
-          <button @click="isCategoryMenuOpen = !isCategoryMenuOpen" 
+          <button @click.stop="isCategoryMenuOpen = !isCategoryMenuOpen" 
                   class="home-category-toggle">
             <!-- Glow effect for dark mode -->
-            <div class="home-category-glow"></div>
+            <div class="home-category-glow pointer-events-none"></div>
             
-            <span v-if="!isCategoryMenuOpen" class="home-category-icon">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="home-category-svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <span v-if="!isCategoryMenuOpen" class="home-category-icon pointer-events-none">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="home-category-svg pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
             </svg>
 
             <!-- Tooltip -->
-            <span class="home-category-tooltip">
+            <span class="home-category-tooltip pointer-events-none">
                 {{ isCategoryMenuOpen ? '關閉選單' : '類別：' + categories.find(c => c.id === selectedCategory)?.name }}
             </span>
           </button>
@@ -195,17 +184,19 @@ const Home = defineComponent({
         <transition name="fade">
           <div v-if="activeItem" class="home-toast">
             <div class="home-toast-title">🚧 ACCESS DENIED 🚧</div>
-            <div>{{ activeItem.title }} 正在開發中...</div>
+            <div>{{ activeItem?.title }} 正在開發中...</div>
           </div>
         </transition>
 
       </div>
     </LayoutComponent>
   `
-});
+};
 
-const app = createApp(Home);
-app.use(PrimeVue, {
+const homeApp_instance = createApp(_HomeObj);
+
+homeApp_instance.component('LayoutComponent', LayoutComponent);
+homeApp_instance.use(PrimeVue, {
   theme: {
     preset: Aura,
     options: {
@@ -213,6 +204,4 @@ app.use(PrimeVue, {
     }
   }
 });
-app.mount('#app');
-
-
+homeApp_instance.mount('#homeApp');

@@ -1,0 +1,229 @@
+@reference "./index.css";
+
+.layout-app-bg {
+  @apply fixed inset-0 z-[-1] bg-white dark:bg-[#0a0f1a];
+  transition: background-color 2.0s ease-in-out;
+}
+
+.dark .layout-app-bg {
+  transition: background-color 2.0s ease-in-out;
+}
+
+body.no-transition .layout-app-bg,
+body.no-transition .layout-app-bg::after {
+  transition: none !important;
+}
+
+.layout-app-bg::after {
+  content: '';
+  @apply absolute inset-0 pointer-events-none;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 245, 210, 0.4) 0%, rgba(255, 255, 255, 0) 60%);
+  opacity: 1;
+  transition: opacity 2.0s ease-in-out;
+}
+
+.dark .layout-app-bg::after {
+  opacity: 0;
+  transition: opacity 2.0s ease-in-out;
+}
+
+.layout-cyberpunk-borders {
+  @apply pointer-events-none fixed inset-0 z-50 overflow-hidden;
+}
+
+.layout-main-content-wrapper {
+  @apply relative z-10 h-screen overflow-hidden py-4 px-4 md:px-8 flex flex-col;
+  height: 100dvh;
+}
+
+.layout-three-canvas {
+  @apply fixed inset-0 z-0 pointer-events-none;
+}
+
+.layout-scanline-overlay {
+  @apply absolute inset-0 bg-[linear-gradient(transparent_50%,rgba(0,0,0,0.05)_50%)] bg-[length:100%_4px] opacity-10 dark:opacity-40 pointer-events-none mix-blend-overlay;
+}
+
+.layout-announcement-overlay {
+  @apply fixed top-0 left-0 right-0 z-[70] pointer-events-none;
+}
+
+.layout-announcement-card {
+  @apply max-w-5xl mx-auto mt-4 glass-card overflow-hidden flex items-center border-l-4 border-blue-500 animate-fade-in pointer-events-auto shadow-2xl;
+}
+
+.layout-announcement-icon-container {
+  @apply px-4 py-3 bg-blue-500/10 text-blue-500;
+}
+
+.layout-announcement-icon {
+  @apply text-xl;
+}
+
+.layout-announcement-content {
+  @apply marquee-container flex-1 py-3;
+}
+
+.layout-announcement-text {
+  @apply marquee-content text-black font-bold text-sm md:text-base;
+}
+
+.layout-announcement-close-btn {
+  @apply px-4 text-slate-900 dark:text-slate-400 hover:text-black dark:hover:text-slate-300 transition-colors;
+}
+
+.layout-floating-menu-container {
+  @apply fixed bottom-4 right-4 flex flex-col items-end gap-3 z-[110];
+}
+
+.layout-menu-items {
+  @apply flex flex-col gap-3 mb-1 animate-slide-up;
+}
+
+.layout-menu-btn {
+  @apply w-14 h-14 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl border border-white/20;
+}
+
+.layout-menu-btn-icon {
+  @apply text-2xl;
+}
+
+.layout-menu-btn-tooltip {
+  @apply absolute right-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10;
+}
+
+.layout-main-menu-toggle {
+  @apply w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)];
+}
+
+.layout-main-menu-glow {
+  @apply absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse pointer-events-none;
+}
+
+.layout-main-menu-icon {
+  @apply h-8 w-8 relative z-10;
+}
+
+.layout-bottom-left-slot {
+  @apply fixed bottom-4 left-4 z-[110] flex flex-col-reverse items-start gap-4;
+}
+
+.layout-content-area {
+  @apply flex-1 overflow-y-auto overflow-x-hidden;
+  -ms-overflow-style: none; /* IE/Edge */
+  scrollbar-width: none;    /* Firefox */
+}
+.layout-content-area::-webkit-scrollbar {
+  display: none;            /* Chrome/Safari */
+}
+
+/* Running Dog Animation */
+.running-dog {
+  position: fixed;
+  bottom: 20px;
+  z-index: 5;
+  pointer-events: none;
+  font-size: 3.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  filter: drop-shadow(0 5px 15px rgba(0,0,0,0.1));
+}
+
+/* Flying Bird Animation */
+.flying-bird {
+  position: fixed;
+  top: 40px;
+  z-index: 9999;
+  pointer-events: none;
+  font-size: 2.5rem;
+  display: flex;
+  align-items: center;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1));
+}
+
+.bird-emoji {
+  display: inline-block;
+  animation: bird-flap 0.3s infinite alternate ease-in-out;
+}
+
+@keyframes bird-flap {
+  from { transform: translateY(0) rotate(-10deg) scaleY(1); }
+  to { transform: translateY(-5px) rotate(10deg) scaleY(0.8); }
+}
+
+/* Peeking Animal / Spotlight */
+.peek-container {
+  position: fixed;
+  z-index: 9999;
+  pointer-events: none;
+  font-size: 2.5rem;
+  opacity: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.peek-icon {
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,0.1));
+}
+
+.spotlight-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flashlight-icon {
+  z-index: 10001;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,0.5));
+  /* No fixed rotation here, handled by JS */
+}
+
+.spotlight-beam {
+  position: absolute;
+  width: 500px; /* Larger beam */
+  height: 500px;
+  /* Position the beam at the tip of the flashlight */
+  top: -230px;
+  left: -230px;
+  background: radial-gradient(circle at center, rgba(255,255,255,0.45) 0%, rgba(255,255,255,0.15) 40%, transparent 75%);
+  border-radius: 50%;
+  z-index: 10000;
+  filter: blur(20px);
+  pointer-events: none;
+}
+
+.dog-emoji {
+  display: inline-block;
+  animation: dog-bounce 0.4s infinite alternate ease-in-out;
+}
+
+@keyframes dog-bounce {
+  from { transform: translateY(0) rotate(-5deg); }
+  to { transform: translateY(-15px) rotate(5deg); }
+}
+
+.dog-dust {
+  width: 20px;
+  height: 5px;
+  background: rgba(0,0,0,0.1);
+  border-radius: 50%;
+  margin-top: -5px;
+  animation: dust-scale 0.4s infinite alternate ease-in-out;
+}
+
+@keyframes dust-scale {
+  from { transform: scale(1); opacity: 0.3; }
+  to { transform: scale(1.5); opacity: 0.1; }
+}
+
+/* Flashy Particles */
+.particle {
+  position: fixed;
+  pointer-events: none;
+  z-index: 1000;
+  border-radius: 50%;
+}
+
