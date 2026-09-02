@@ -24,6 +24,7 @@ export class ThreeCarousel {
   private velocity = 0;
   private isDragging = false;
   private lastMouseX = 0;
+  private lastMouseY = 0;
   private totalMoved = 0;
   
   private raycaster = new THREE.Raycaster();
@@ -169,6 +170,7 @@ export class ThreeCarousel {
       });
       
       const mesh = new THREE.Mesh(cardGeometry, material);
+      mesh.userData.id = item.id;
       this.scene.add(mesh);
       this.cards.push(mesh);
     });
@@ -251,8 +253,9 @@ export class ThreeCarousel {
     window.addEventListener('mouseup', this.boundOnMouseUp);
     
     this.container.addEventListener('touchstart', this.onTouchStart.bind(this));
-    window.addEventListener('touchmove', this.boundOnTouchMove);
+    window.addEventListener('touchmove', this.boundOnTouchMove, { passive: false });
     window.addEventListener('touchend', this.boundOnMouseUp);
+    window.addEventListener('touchcancel', this.boundOnMouseUp);
     
     this.container.addEventListener('click', this.onClick.bind(this));
     
@@ -296,22 +299,40 @@ export class ThreeCarousel {
   }
 
   private onTouchStart(e: TouchEvent) {
+    if (e.touches.length === 0) return;
     this.isDragging = true;
     this.lastMouseX = e.touches[0].clientX;
+    this.lastMouseY = e.touches[0].clientY;
     this.totalMoved = 0;
     this.velocity = 0;
   }
 
   private onTouchMove(e: TouchEvent) {
-    if (!this.isDragging) return;
-    const delta = e.touches[0].clientX - this.lastMouseX;
+    if (!this.isDragging || e.touches.length === 0) return;
+    
+    // Only track the first touch point
+    const touch = e.touches[0];
+    
+    const deltaX = touch.clientX - this.lastMouseX;
+    const deltaY = touch.clientY - this.lastMouseY;
+    
+    // Prevent default scrolling only when dragging horizontally
+    if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 5) {
+        if (e.cancelable) {
+            e.preventDefault();
+        }
+    }
+    
+    const delta = touch.clientX - this.lastMouseX;
     this.totalMoved += Math.abs(delta);
-    this.lastMouseX = e.touches[0].clientX;
+    this.lastMouseX = touch.clientX;
+    this.lastMouseY = touch.clientY;
     this.targetOffset += delta * 0.01;
     this.velocity = delta * 0.01;
   }
 
   private onMouseUp() {
+    if (!this.isDragging) return;
     this.isDragging = false;
     
     // Apply inertia based on velocity
@@ -342,27 +363,74 @@ export class ThreeCarousel {
     
     if (intersects.length > 0) {
       const clickedMesh = intersects[0].object as THREE.Mesh;
-      const index = this.cards.indexOf(clickedMesh);
+      const index = this.items.findIndex(item => item.id === clickedMesh.userData.id);
       
       // Check if it's the front card
       const step = (Math.PI * 2) / this.cards.length;
-      const angle = (index * step + this.offset) % (Math.PI * 2);
-      const normalizedAngle = ((angle + Math.PI) % (Math.PI * 2)) - Math.PI;
+      const angle = index * step + this.offset;
+      
+      // Correct modulo for negative numbers
+      let normalizedAngle = ((angle % (Math.PI * 2)) + (Math.PI * 2)) % (Math.PI * 2);
+      if (normalizedAngle > Math.PI) normalizedAngle -= Math.PI * 2;
       
       if (Math.abs(normalizedAngle) < 0.5) {
-        // Eject animation
+        // Theme-consistent transition: Spin and Fade
+        clickedMesh.userData.ejected = true;
+        
+        // Trigger background celebration if available (from layout.ts)
+        if ((window as any).threeBg && typeof (window as any).threeBg.celebrate === 'function') {
+          (window as any).threeBg.celebrate();
+        }
+
+        const material = clickedMesh.material as THREE.ShaderMaterial;
+        
+        // Spin the card
+        gsap.to(clickedMesh.rotation, {
+          y: clickedMesh.rotation.y + Math.PI * 2,
+          duration: 0.8,
+          ease: 'power2.inOut'
+        });
+
+        // Rotate the entire carousel 180 degrees (like the celestial dial)
+        gsap.to(this, {
+          targetOffset: this.targetOffset + Math.PI,
+          duration: 1.2,
+          ease: 'power3.inOut'
+        });
+
+        // Fade out the card
+        gsap.to(material.uniforms.uOpacity, {
+          value: 0,
+          duration: 0.8,
+          ease: 'power2.in'
+        });
+
+        // Fade out all cards in the carousel
+        this.cards.forEach(c => {
+          const mat = c.material as THREE.ShaderMaterial;
+          gsap.to(mat.uniforms.uOpacity, {
+            value: 0,
+            duration: 1.0,
+            ease: 'power2.in'
+          });
+        });
+
+        // Move slightly forward and up
         gsap.to(clickedMesh.position, {
-          z: clickedMesh.position.z + 5,
-          duration: 0.5,
-          ease: 'back.in(2)',
+          z: clickedMesh.position.z + 2,
+          y: clickedMesh.position.y + 0.5,
+          duration: 0.8,
+          ease: 'power2.inOut',
           onComplete: () => {
             this.onSelect(this.items[index]);
+            // Reset state in case navigation is slow
+            setTimeout(() => {
+              clickedMesh.userData.ejected = false;
+              this.cards.forEach(c => {
+                (c.material as THREE.ShaderMaterial).uniforms.uOpacity.value = 1.0;
+              });
+            }, 1000);
           }
-        });
-        gsap.to(clickedMesh.scale, {
-          x: 2,
-          y: 2,
-          duration: 0.5
         });
       } else {
         // Scroll to this card
@@ -381,6 +449,23 @@ export class ThreeCarousel {
     }
   }
 
+  public rotateToIndex(index: number) {
+    if (this.cards.length === 0) return;
+    
+    const step = (Math.PI * 2) / this.cards.length;
+    const target = -index * step;
+    
+    let diff = target - this.targetOffset;
+    while (diff > Math.PI) diff -= Math.PI * 2;
+    while (diff < -Math.PI) diff += Math.PI * 2;
+    
+    gsap.to(this, {
+      targetOffset: this.targetOffset + diff,
+      duration: 0.8,
+      ease: 'power3.out'
+    });
+  }
+
   private animate() {
     requestAnimationFrame(this.animate.bind(this));
     
@@ -394,19 +479,34 @@ export class ThreeCarousel {
     
     const step = (Math.PI * 2) / this.cards.length;
     
-    this.cards.forEach((card, i) => {
-      const angle = i * step + this.offset;
+    // Sort cards by depth (z-index) to ensure proper rendering order
+    this.cards.sort((a, b) => a.position.z - b.position.z);
+    
+    this.cards.forEach((card) => {
+      const index = this.items.findIndex(item => item.id === card.userData.id);
+      const angle = index * step + this.offset;
       
-      card.position.x = Math.sin(angle) * this.radius;
-      card.position.z = Math.cos(angle) * this.radius;
-      card.rotation.y = angle;
+      // Normalize angle to -PI to PI for seamless rotation and correct depth sorting
+      let normalizedAngle = angle % (Math.PI * 2);
+      if (normalizedAngle > Math.PI) normalizedAngle -= Math.PI * 2;
+      if (normalizedAngle < -Math.PI) normalizedAngle += Math.PI * 2;
       
-      // Visuals based on distance
-      const distance = card.position.z; // -radius to radius
-      const normalizedDist = (distance + this.radius) / (this.radius * 2); // 0 to 1 (0 is back, 1 is front)
+      if (!card.userData.ejected) {
+        card.position.x = Math.sin(normalizedAngle) * this.radius;
+        card.position.z = Math.cos(normalizedAngle) * this.radius;
+        card.rotation.y = normalizedAngle;
+        
+        // Visuals based on distance
+        const distance = card.position.z; // -radius to radius
+        const normalizedDist = (distance + this.radius) / (this.radius * 2); // 0 to 1 (0 is back, 1 is front)
+        
+        const scale = 0.5 + normalizedDist * 0.5;
+        card.scale.set(scale, scale, 1);
+      }
       
-      const scale = 0.5 + normalizedDist * 0.5;
-      card.scale.set(scale, scale, 1);
+      // We still update material uniforms even if ejected
+      const distance = card.position.z;
+      const normalizedDist = (distance + this.radius) / (this.radius * 2);
       
       const material = card.material as THREE.ShaderMaterial;
       // Update time for beam flow
@@ -445,14 +545,15 @@ export class ThreeCarousel {
     if (this.isDark === isDark) return;
     this.isDark = isDark;
     
-    this.cards.forEach((card, i) => {
+    this.cards.forEach((card) => {
+      const index = this.items.findIndex(item => item.id === card.userData.id);
       const material = card.material as THREE.ShaderMaterial;
       material.uniforms.uIsDark.value = isDark;
       const texture = material.uniforms.tMap.value as THREE.CanvasTexture;
       const canvas = texture.image as HTMLCanvasElement;
       const ctx = canvas.getContext('2d')!;
       
-      this.drawCardCanvas(ctx, this.items[i]);
+      this.drawCardCanvas(ctx, this.items[index]);
       texture.needsUpdate = true;
     });
   }

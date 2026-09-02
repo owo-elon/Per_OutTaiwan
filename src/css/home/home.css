@@ -1,0 +1,86 @@
+@reference "../_global/index.css";
+
+.home-category-container {
+  @apply flex flex-col-reverse items-start gap-4;
+}
+
+.home-category-toggle {
+  @apply w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)];
+}
+
+.home-category-glow {
+  @apply absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse;
+}
+
+.home-category-icon {
+  @apply text-2xl relative z-10;
+}
+
+.home-category-svg {
+  @apply h-7 w-7 relative z-10;
+}
+
+.home-category-tooltip {
+  @apply absolute left-20 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10;
+}
+
+.home-category-menu {
+  @apply w-48 p-3 rounded-3xl border border-white/20 shadow-2xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl flex flex-col gap-2;
+}
+
+.home-category-item {
+  @apply flex items-center gap-3 px-4 py-3 rounded-2xl transition-all;
+}
+
+.home-category-item-active {
+  @apply bg-emerald-500 text-white shadow-lg shadow-emerald-500/30;
+}
+
+.home-category-item-inactive {
+  @apply hover:bg-white/50 dark:hover:bg-slate-800/50 text-slate-700 dark:text-slate-300;
+}
+
+.home-category-item-icon {
+  @apply text-xl;
+}
+
+.home-category-item-text {
+  @apply font-bold text-sm;
+}
+
+.home-carousel-wrapper {
+  @apply relative w-full h-[600px] md:h-[700px] overflow-hidden bg-transparent;
+}
+
+.home-carousel-container {
+  @apply w-full h-full;
+  touch-action: none;
+}
+
+.home-toast {
+  @apply fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 bg-[#1A1A1A] border border-[#00E5FF] p-6 rounded-lg shadow-[0_0_30px_rgba(0,229,255,0.3)] text-[#00E5FF] font-mono text-center;
+}
+
+.home-toast-title {
+  @apply text-2xl mb-2;
+}
+
+/* Transitions */
+.menu-enter-active {
+  @apply transition duration-300 ease-out;
+}
+.menu-enter-from {
+  @apply transform -translate-x-8 opacity-0;
+}
+.menu-enter-to {
+  @apply transform translate-x-0 opacity-100;
+}
+.menu-leave-active {
+  @apply transition duration-200 ease-in;
+}
+.menu-leave-from {
+  @apply transform translate-x-0 opacity-100;
+}
+.menu-leave-to {
+  @apply transform -translate-x-8 opacity-0;
+}
