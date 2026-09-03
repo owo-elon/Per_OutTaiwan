@@ -1,207 +1,170 @@
-import PrimeVue from 'primevue/config';
-import Aura from '@primevue/themes/aura';
-
-import { createApp, defineComponent, ref, onMounted, onUnmounted, computed, watch } from 'vue';
-import { LayoutComponent } from '../_global/layout';
-import { ThreeCarousel, CarouselItem } from '../_global/threecarousel';
+import { createApp, defineComponent, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import { LayoutComponent } from '../../layout/layout';
+import { useHomeDashboard } from '../../composables/useHomeDashboard';
+import { ThreeCarousel } from '../../three/carousel/ThreeCarousel';
+import type { CarouselItem } from '../../types/home';
 import '../../css/_global/index.css';
+import '../../css/_global/layout.css';
 import '../../css/home/home.css';
 
-const _HomeObj = {
-  name: 'Home',
+const HomeApp = defineComponent({
+  name: 'HomeApp',
+  components: {
+    LayoutComponent
+  },
   setup() {
-    const carouselContainer = ref<HTMLElement | null>(null);
+    const carouselHost = ref<HTMLElement | null>(null);
+    const dashboard = useHomeDashboard();
     let carousel: ThreeCarousel | null = null;
-    const activeItem = ref<CarouselItem | null>(null);
-    const isDark = ref(localStorage.getItem('darkMode') === 'true');
-    const selectedCategory = ref('all');
-    const isCategoryMenuOpen = ref(false);
+    let stopWatching: (() => void) | null = null;
 
-    const features = ref<CarouselItem[]>([]);
-    const categories = ref<any[]>([]);
+    const featureHref = (feature: CarouselItem) => (
+      feature.link === '#'
+        ? '#'
+        : `${import.meta.env.BASE_URL}${feature.link}`
+    );
 
-    const loadHomeData = async () => {
-      try {
-        const url = `${import.meta.env.BASE_URL}home/home.json`;
-        const response = await fetch(url);
-        if (response.ok) {
-          const data = await response.json();
-          features.value = data.features || [];
-          categories.value = data.categories || [];
-
-          // Initialize carousel after data is loaded
-          initCarousel();
-        } else {
-          console.error("Fetch failed with status:", response.status);
-        }
-      } catch (e) {
-        console.error('Failed to load home data', e);
+    const rebuildCarousel = async () => {
+      await nextTick();
+      if (!carouselHost.value) {
+        return;
       }
-    };
 
-    const filteredFeatures = computed(() => {
-      return features.value; // Do not filter, always show all
-    });
-
-    const initCarousel = () => {
-      if (carouselContainer.value && features.value.length > 0) {
-        carousel = new ThreeCarousel(carouselContainer.value, features.value, isDark.value, (item) => {
-          if (item.link !== '#') {
-            // Use router for navigation instead of direct href if possible, but since it's MPA, we use href
-            window.location.href = `${import.meta.env.BASE_URL}${item.link}`;
-          } else {
-            activeItem.value = item;
-            setTimeout(() => {
-              activeItem.value = null;
-            }, 2000);
-          }
-        });
+      if (!carousel) {
+        carousel = new ThreeCarousel(carouselHost.value, dashboard.filteredFeatures.value);
+      } else {
+        carousel.setItems(dashboard.filteredFeatures.value);
       }
     };
 
     onMounted(() => {
-      loadHomeData();
-
-      // Watch for category changes to rotate
-      watch(selectedCategory, (newCat) => {
-        if (carousel) {
-          if (newCat === 'all') {
-            carousel.rotateToIndex(0);
-          } else {
-            const index = features.value.findIndex(f => f.category === newCat);
-            if (index !== -1) {
-              carousel.rotateToIndex(index);
-            }
-          }
-        }
-      });
-
-      // Watch for theme changes on body class
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.attributeName === 'class') {
-            const isDarkMode = document.body.classList.contains('dark');
-            isDark.value = isDarkMode;
-            if (carousel) {
-              carousel.updateTheme(isDarkMode);
-            }
-          }
-        });
-      });
-
-      observer.observe(document.body, { attributes: true });
-
-      const closeMenus = (e: MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (!target.closest('.home-category-container')) {
-          isCategoryMenuOpen.value = false;
-        }
-      };
-      const handleScroll = () => {
-        isCategoryMenuOpen.value = false;
-      };
-      window.addEventListener('click', closeMenus);
-      window.addEventListener('scroll', handleScroll, { passive: true });
-
-      onUnmounted(() => {
-        observer.disconnect();
-        window.removeEventListener('click', closeMenus);
-        window.removeEventListener('scroll', handleScroll);
-        if (carousel) {
-          carousel.destroy();
-        }
-      });
+      stopWatching = watch(dashboard.filteredFeatures, rebuildCarousel, { immediate: true });
     });
 
-    const selectCategory = (catId: string) => {
-      selectedCategory.value = catId;
-      isCategoryMenuOpen.value = false;
-    };
+    onBeforeUnmount(() => {
+      stopWatching?.();
+      carousel?.destroy();
+    });
 
     return {
-      carouselContainer,
-      activeItem,
-      features,
-      selectedCategory,
-      isCategoryMenuOpen,
-      categories,
-      filteredFeatures,
-      selectCategory
+      ...dashboard,
+      carouselHost,
+      featureHref,
+      previousFeature: () => carousel?.previous(),
+      nextFeature: () => carousel?.next()
     };
   },
   template: `
-    <LayoutComponent title="elon Tools" :show-announcement="false">
-      <template #bottom-left>
-        <!-- Category Selector -->
-        <div class="home-category-container">
-          <!-- Toggle Button -->
-          <button @click.stop="isCategoryMenuOpen = !isCategoryMenuOpen" 
-                  class="home-category-toggle">
-            <!-- Glow effect for dark mode -->
-            <div class="home-category-glow pointer-events-none"></div>
-            
-            <span v-if="!isCategoryMenuOpen" class="home-category-icon pointer-events-none">{{ categories.find(c => c.id === selectedCategory)?.icon }}</span>
-            <svg v-else xmlns="http://www.w3.org/2000/svg" class="home-category-svg pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-
-            <!-- Tooltip -->
-            <span class="home-category-tooltip pointer-events-none">
-                {{ isCategoryMenuOpen ? '關閉選單' : '類別：' + categories.find(c => c.id === selectedCategory)?.name }}
-            </span>
-          </button>
-
-          <!-- Category Menu -->
-          <transition 
-              enter-active-class="menu-enter-active"
-              enter-from-class="menu-enter-from"
-              enter-to-class="menu-enter-to"
-              leave-active-class="menu-leave-active"
-              leave-from-class="menu-leave-from"
-              leave-to-class="menu-leave-to"
-          >
-            <div v-if="isCategoryMenuOpen" 
-                 class="home-category-menu glass-card">
-              <button v-for="cat in categories" 
-                      :key="cat.id"
-                      @click="selectCategory(cat.id)"
-                      class="home-category-item"
-                      :class="selectedCategory === cat.id ? 'home-category-item-active' : 'home-category-item-inactive'">
-                <span class="home-category-item-icon">{{ cat.icon }}</span>
-                <span class="home-category-item-text">{{ cat.name }}</span>
-              </button>
-            </div>
-          </transition>
-        </div>
-      </template>
-
-      <div class="home-carousel-wrapper">
-        
-        <!-- Three.js Container -->
-        <div ref="carouselContainer" class="home-carousel-container"></div>
-
-        <!-- Developing Toast -->
-        <transition name="fade">
-          <div v-if="activeItem" class="home-toast">
-            <div class="home-toast-title">🚧 ACCESS DENIED 🚧</div>
-            <div>{{ activeItem?.title }} 正在開發中...</div>
+    <LayoutComponent>
+      <section class="home-dashboard">
+        <div class="home-hero">
+          <div class="home-hero__copy">
+            <p class="eyebrow">MISSION CONTROL / TAIWAN OUTBOUND</p>
+            <h1>把旅行雜事，<span>變成可執行的任務。</span></h1>
+            <p class="home-hero__lead">
+              從打包、抽選到下一段旅程，所有工具都在同一個快速、清楚且跨裝置的控制台。
+            </p>
           </div>
-        </transition>
 
-      </div>
+          <div class="mission-metrics" aria-label="系統摘要">
+            <div>
+              <span>{{ features.length.toString().padStart(2, '0') }}</span>
+              <small>MODULES</small>
+            </div>
+            <div>
+              <span>{{ categories.length.toString().padStart(2, '0') }}</span>
+              <small>CHANNELS</small>
+            </div>
+            <div>
+              <span>24/7</span>
+              <small>READY</small>
+            </div>
+          </div>
+        </div>
+
+        <div class="module-toolbar">
+          <div class="module-toolbar__heading">
+            <span>01</span>
+            <div>
+              <p>SELECT CHANNEL</p>
+              <h2>選擇任務模組</h2>
+            </div>
+          </div>
+
+          <div class="category-filter" role="group" aria-label="功能分類">
+            <button
+              v-for="category in categories"
+              :key="category.id"
+              type="button"
+              :class="{ 'is-active': activeCategory === category.id }"
+              :aria-pressed="activeCategory === category.id"
+              @click="selectCategory(category.id)"
+            >
+              <span aria-hidden="true">{{ category.icon }}</span>
+              {{ category.name }}
+            </button>
+          </div>
+        </div>
+
+        <div v-if="isLoading" class="state-panel" role="status">
+          <span class="loading-ring" aria-hidden="true"></span>
+          正在連接任務資料…
+        </div>
+        <div v-else-if="errorMessage" class="state-panel state-panel--error" role="alert">
+          {{ errorMessage }}
+        </div>
+
+        <template v-else>
+          <div class="carousel-shell">
+            <button
+              class="carousel-control carousel-control--previous"
+              type="button"
+              aria-label="上一個功能"
+              @click="previousFeature"
+            >←</button>
+            <div ref="carouselHost" class="home-carousel-stage"></div>
+            <button
+              class="carousel-control carousel-control--next"
+              type="button"
+              aria-label="下一個功能"
+              @click="nextFeature"
+            >→</button>
+            <p class="carousel-hint">拖曳、水平滾動或使用方向按鈕切換；點擊中央卡片開啟。</p>
+          </div>
+
+          <div class="module-shortcuts" aria-label="功能快速連結">
+            <template v-for="feature in filteredFeatures" :key="feature.id">
+              <a
+                v-if="feature.link !== '#'"
+                class="module-shortcut"
+                :href="featureHref(feature)"
+              >
+                <span class="module-shortcut__icon" aria-hidden="true">{{ feature.icon }}</span>
+                <span>
+                  <strong>{{ feature.title }}</strong>
+                  <small>{{ feature.description }}</small>
+                </span>
+                <i aria-hidden="true">↗</i>
+              </a>
+              <button
+                v-else
+                class="module-shortcut is-disabled"
+                type="button"
+                disabled
+              >
+                <span class="module-shortcut__icon" aria-hidden="true">{{ feature.icon }}</span>
+                <span>
+                  <strong>{{ feature.title }}</strong>
+                  <small>{{ feature.description }}</small>
+                </span>
+                <i aria-hidden="true">SOON</i>
+              </button>
+            </template>
+          </div>
+        </template>
+      </section>
     </LayoutComponent>
   `
-};
-
-const homeApp_instance = createApp(_HomeObj);
-
-homeApp_instance.component('LayoutComponent', LayoutComponent);
-homeApp_instance.use(PrimeVue, {
-  theme: {
-    preset: Aura,
-    options: {
-      darkModeSelector: '.dark',
-    }
-  }
 });
-homeApp_instance.mount('#homeApp');
+
+createApp(HomeApp).mount('#homeApp');

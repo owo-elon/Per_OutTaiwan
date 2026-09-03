@@ -1,243 +1,513 @@
-/* TakeList.css */
-
-@reference "../_global/index.css";
-
-.takelist-carousel-wrapper {
-  @apply absolute inset-0 flex items-start justify-center pt-4 pb-4 preserve-3d transition-transform duration-75;
+.takelist-page {
+  display: grid;
+  gap: var(--space-6);
 }
 
-.takelist-announcement-overlay {
-  @apply fixed top-0 left-0 right-0 z-[60] pointer-events-none;
+.packing-onboarding {
+  display: grid;
+  grid-template-columns: minmax(0, 0.75fr) minmax(24rem, 1.25fr);
+  align-items: center;
+  gap: clamp(2rem, 7vw, 7rem);
+  min-height: 64vh;
 }
 
-.takelist-announcement-banner {
-  @apply max-w-5xl mx-auto mt-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-l-4 border-indigo-600 dark:border-indigo-400 rounded-r-2xl flex items-center overflow-hidden shadow-xl animate-fade-in pointer-events-auto;
+.packing-onboarding__copy h1,
+.packing-header h1 {
+  margin: 0;
+  font-size: clamp(2.3rem, 6vw, 5.4rem);
+  font-weight: 850;
+  letter-spacing: -0.055em;
+  line-height: 1;
 }
 
-.takelist-menu-toggle {
-  @apply w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)];
+.packing-onboarding__copy > p:not(.eyebrow) {
+  max-width: 34rem;
+  margin: var(--space-5) 0 0;
+  color: var(--color-muted);
+  font-size: 1.05rem;
+  line-height: 1.75;
 }
 
-.takelist-menu-glow {
-  @apply absolute inset-0 hidden dark:block bg-slate-400/10 animate-pulse;
+.onboarding-panel {
+  display: grid;
+  gap: var(--space-8);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  padding: clamp(1.25rem, 4vw, 2.3rem);
+  background: var(--gradient-panel);
+  box-shadow: var(--shadow-panel);
 }
 
-.takelist-action-btn {
-  @apply w-16 h-16 rounded-full flex items-center justify-center transition-all glass-card hover:scale-110 active:scale-95 shadow-2xl border border-white/20 text-white touch-manipulation;
+.onboarding-panel fieldset {
+  min-width: 0;
+  margin: 0;
+  border: 0;
+  padding: 0;
 }
 
-.takelist-action-btn-primary {
-  @apply bg-indigo-600 dark:bg-indigo-500;
+.onboarding-panel legend {
+  margin-bottom: var(--space-4);
+  color: var(--color-faint);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
-.takelist-action-btn-secondary {
-  @apply bg-emerald-500 dark:bg-emerald-600;
+.country-grid,
+.gender-actions {
+  display: grid;
+  gap: var(--space-3);
 }
 
-.takelist-action-btn-danger {
-  @apply bg-red-500 dark:bg-red-600;
+.country-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
-.takelist-tooltip {
-  @apply absolute left-16 bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-white px-3 py-1 rounded-lg text-xs opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap border border-slate-200 dark:border-white/10;
+.country-grid button {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  min-height: 5rem;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0.8rem 1rem;
+  background: var(--color-panel);
+  cursor: pointer;
+  text-align: left;
 }
 
-.takelist-panel {
-  @apply absolute bottom-0 left-20 w-72 glass-card p-4 rounded-3xl border border-white/20 shadow-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl animate-fade-in;
+.country-grid button > span {
+  grid-row: 1 / 3;
+  font-size: 1.8rem;
 }
 
-.takelist-main-container {
-  @apply w-full max-w-5xl mx-auto px-4 md:px-8 pt-4 pb-32 min-h-screen flex flex-col;
+.country-grid button strong {
+  align-self: end;
 }
 
-.takelist-header-card {
-  @apply glass-card rounded-[2rem] p-4 md:p-6 mb-2 shadow-xl relative overflow-hidden transition-all duration-500 w-full max-w-6xl mx-auto;
+.country-grid button small {
+  align-self: start;
+  color: var(--color-faint);
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
 }
 
-.takelist-header-bg {
-  @apply absolute top-0 right-0 w-64 h-64 bg-emerald-500/10 dark:bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none;
+.country-grid button.is-active {
+  border-color: var(--color-line-strong);
+  background: color-mix(in srgb, var(--color-primary) 11%, var(--color-panel-strong));
+  box-shadow: var(--shadow-glow);
 }
 
-.takelist-progress-container {
-  @apply h-4 md:h-6 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner relative;
+.gender-actions {
+  grid-template-columns: 1fr 1fr;
 }
 
-.takelist-progress-bar {
-  @apply h-full bg-gradient-to-r from-emerald-400 to-teal-500 relative;
+.gender-actions button {
+  display: flex;
+  min-height: 3.7rem;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--gradient-primary);
+  color: #ffffff;
+  cursor: pointer;
+  font-weight: 800;
 }
 
-.takelist-progress-glow {
-  @apply absolute inset-0 bg-white/20;
+.gender-actions span {
+  font-size: 1.25rem;
 }
 
-.takelist-category-card {
-  @apply glass-card rounded-[2rem] p-5 md:p-6 mb-6 shadow-lg transition-all duration-500 hover:shadow-xl hover:bg-white/60 dark:hover:bg-slate-800/60;
+.packing-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-6);
 }
 
-.takelist-item-row {
-  @apply flex items-center p-3 md:p-4 bg-white/40 dark:bg-slate-800/40 rounded-2xl mb-3 border border-white/30 dark:border-white/5 cursor-pointer transition-all duration-300 hover:bg-white/80 dark:hover:bg-slate-700/80 hover:translate-x-1 md:hover:translate-x-2;
+.packing-header h1 {
+  margin-top: var(--space-2);
+  font-size: clamp(2rem, 5vw, 4.4rem);
 }
 
-.takelist-item-checkbox {
-  @apply w-6 h-6 md:w-7 md:h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-300 shadow-sm shrink-0;
+.packing-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
 }
 
-.takelist-carousel-area {
-  @apply relative min-h-[500px] mt-6 mb-0 w-full z-10 overflow-visible;
-  perspective: 2000px;
+.packing-dashboard {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(17rem, 0.5fr);
+  gap: var(--space-4);
 }
 
-.takelist-nav-btn {
-  @apply w-12 h-12 rounded-full bg-white/80 dark:bg-slate-800/80 flex items-center justify-center text-slate-900 dark:text-white shadow-lg border border-white/20 hover:scale-110 active:scale-95 transition-all backdrop-blur-sm;
+.progress-panel,
+.weather-panel {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  background: var(--gradient-panel);
+  box-shadow: var(--shadow-panel);
 }
 
-.takelist-modal-overlay {
-  @apply fixed inset-0 z-[200] flex items-center justify-center p-4;
+.progress-panel__readout,
+.weather-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-.takelist-modal-backdrop {
-  @apply absolute inset-0 bg-slate-900/60 backdrop-blur-sm;
+.progress-panel__readout p,
+.weather-panel p {
+  margin: 0;
+  color: var(--color-faint);
+  font-size: 0.62rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
 }
 
-.takelist-modal-content {
-  @apply glass-card p-8 rounded-3xl shadow-2xl max-w-sm w-full relative z-10 animate-scale-in;
+.progress-panel__readout strong {
+  display: block;
+  margin-top: var(--space-2);
+  font-size: 1.1rem;
 }
 
-.takelist-input {
-  @apply w-full py-3 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-slate-900 dark:text-white font-bold;
+.progress-panel__readout > span {
+  color: var(--color-secondary);
+  font-size: clamp(2rem, 5vw, 3.2rem);
+  font-weight: 850;
 }
 
-.takelist-btn {
-  @apply flex-1 py-3 rounded-2xl font-bold transition-all active:scale-95;
+.progress-track {
+  height: 0.5rem;
+  margin-top: var(--space-4);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--color-line) 74%, transparent);
+  overflow: hidden;
 }
 
-.takelist-btn-cancel {
-  @apply bg-white/50 dark:bg-slate-800/50 text-slate-900 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800;
+.progress-track i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 18px var(--color-secondary);
+  transition: width var(--motion-slow) var(--ease-out);
 }
 
-.takelist-btn-confirm {
-  @apply bg-emerald-500 text-white hover:bg-emerald-600 shadow-lg shadow-emerald-500/20;
+.completion-signal {
+  margin: var(--space-3) 0 0;
+  color: var(--color-success);
+  font-size: 0.85rem;
+  font-weight: 750;
 }
 
-.takelist-btn-danger {
-  @apply bg-red-500 text-white hover:bg-red-600 shadow-lg shadow-red-500/20;
+.weather-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
 }
 
-.takelist-step-wrapper {
-  @apply w-full max-w-5xl mx-auto px-4 md:px-8;
+.weather-panel select {
+  max-width: 8rem;
+  margin-top: var(--space-2);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  font-weight: 750;
 }
 
-.takelist-selection-card {
-  @apply glass-card p-8 rounded-[2rem] text-center cursor-pointer transition-all duration-300 hover:scale-105 hover:bg-white/80 dark:hover:bg-slate-800/80 shadow-lg hover:shadow-2xl border border-white/20 relative overflow-hidden;
+.weather-panel strong {
+  grid-row: 1 / 3;
+  grid-column: 2;
+  color: var(--color-secondary);
+  font-size: 2.35rem;
 }
 
-.takelist-selection-icon {
-  @apply text-6xl md:text-7xl mb-4 group-hover:scale-110 transition-transform duration-300;
+.weather-panel > span,
+.weather-panel > small {
+  grid-column: 1 / 3;
+  color: var(--color-muted);
 }
 
-.takelist-selection-title {
-  @apply text-2xl font-black text-slate-900 dark:text-white;
+.weather-panel > small {
+  font-size: 0.72rem;
 }
 
-.takelist-selection-subtitle {
-  @apply text-sm text-slate-500 dark:text-slate-400 mt-2 font-bold;
+.packing-controls {
+  display: grid;
+  grid-template-columns: minmax(15rem, 0.36fr) minmax(0, 0.64fr);
+  gap: var(--space-4);
 }
 
-.takelist-header-title {
-  @apply text-2xl md:text-3xl font-black flex items-center gap-2;
+.search-control {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-md);
+  padding: 0 var(--space-4);
+  background: var(--color-panel-strong);
 }
 
-.takelist-gender-badge {
-  @apply text-sm px-3 py-1 bg-white/50 dark:bg-slate-800/50 rounded-full border border-slate-200 dark:border-slate-700 shadow-sm;
+.search-control > span {
+  color: var(--color-secondary);
 }
 
-.takelist-header-toggle {
-  @apply p-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 group-hover/header:bg-slate-200 dark:group-hover/header:bg-slate-700 transition-colors;
+.search-control input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
 }
 
-.takelist-header-btn {
-  @apply p-2 rounded-2xl transition-all flex items-center justify-center shadow-lg active:scale-95 border;
+.search-control button {
+  background: transparent;
+  cursor: pointer;
+  font-size: 1.15rem;
 }
 
-.takelist-header-btn-emerald {
-  @apply bg-emerald-500 hover:bg-emerald-400 text-white border-emerald-400/50 shadow-emerald-500/30;
+.category-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding-bottom: 0.2rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 
-.takelist-header-btn-indigo {
-  @apply bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-500/50 shadow-indigo-500/30;
+.category-tabs button {
+  display: inline-flex;
+  min-height: 3rem;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: var(--color-panel);
+  color: var(--color-muted);
+  cursor: pointer;
+  font-size: 0.76rem;
+  font-weight: 750;
 }
 
-.takelist-header-btn-outline {
-  @apply bg-white/50 dark:bg-slate-800/50 hover:bg-white dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700;
+.category-tabs button.is-active {
+  border-color: var(--color-line-strong);
+  background: var(--gradient-primary);
+  color: #ffffff;
+  box-shadow: var(--shadow-glow);
 }
 
-.takelist-progress-text {
-  @apply flex justify-between text-sm font-bold text-slate-600 dark:text-slate-400 mb-2;
+.packing-list {
+  display: grid;
+  gap: var(--space-4);
 }
 
-.takelist-progress-track {
-  @apply h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shadow-inner;
+.packing-category {
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-lg);
+  background: var(--gradient-panel);
+  box-shadow: 0 16px 48px rgba(15, 23, 42, 0.08);
+  overflow: hidden;
 }
 
-.takelist-must-section {
-  @apply mb-2 p-2 rounded-xl bg-red-50/50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 transition-all duration-300;
+.category-heading {
+  display: flex;
+  width: 100%;
+  min-height: 4.25rem;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0 var(--space-5);
+  background: transparent;
+  color: var(--color-text);
+  text-align: left;
 }
 
-.takelist-must-header {
-  @apply flex items-center gap-3 cursor-pointer select-none;
+.category-heading--button {
+  cursor: pointer;
 }
 
-.takelist-must-badge {
-  @apply font-black text-red-600 dark:text-red-400 flex-1;
+.category-heading span {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  font-weight: 800;
 }
 
-.takelist-must-item {
-  @apply flex items-center gap-3 p-2 md:p-3 bg-white/80 dark:bg-slate-900/80 rounded-xl border border-red-100 dark:border-red-900/50 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md;
+.category-heading i {
+  display: grid;
+  width: 2.2rem;
+  height: 2.2rem;
+  place-items: center;
+  border-radius: 0.7rem;
+  background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  color: var(--color-secondary);
+  font-style: normal;
 }
 
-.takelist-must-checkbox {
-  @apply w-6 h-6 md:w-7 md:h-7 rounded-xl border-2 flex items-center justify-center transition-all duration-300 shrink-0;
+.category-heading b {
+  display: grid;
+  min-width: 2rem;
+  height: 2rem;
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: 999px;
+  color: var(--color-muted);
+  font-size: 0.72rem;
 }
 
-.takelist-must-text {
-  @apply font-bold text-slate-900 dark:text-white transition-all duration-300;
+.category-heading em {
+  color: var(--color-secondary);
+  font-size: 1.2rem;
+  font-style: normal;
 }
 
-.takelist-category-header {
-  @apply flex items-center justify-between mb-6;
+.packing-items {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  border-top: 1px solid var(--color-line);
+  background: var(--color-line);
 }
 
-.takelist-category-icon {
-  @apply text-4xl p-3 bg-white/50 dark:bg-slate-800/50 rounded-2xl shadow-sm border border-white/20;
+.packing-item {
+  display: flex;
+  min-width: 0;
+  min-height: 4rem;
+  align-items: stretch;
+  background: var(--color-panel-strong);
 }
 
-.takelist-category-title {
-  @apply text-xl font-black text-slate-900 dark:text-white;
+.packing-item__toggle {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 0.75rem var(--space-4);
+  background: transparent;
+  cursor: pointer;
+  color: var(--color-text);
+  text-align: left;
 }
 
-.takelist-category-subtitle {
-  @apply text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider;
+.packing-checkbox {
+  display: grid;
+  width: 1.45rem;
+  height: 1.45rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 0.4rem;
+  color: #ffffff;
+  font-size: 0.8rem;
 }
 
-.takelist-category-body {
-  @apply mt-4 max-h-[300px] overflow-y-auto pr-2;
-  touch-action: pan-y !important;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
+.packing-item__toggle > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
 }
 
-.takelist-category-body::-webkit-scrollbar {
-  display: none; /* Chrome, Safari and Opera */
+.packing-item__toggle small {
+  color: var(--color-faint);
+  font-size: 0.55rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
 }
 
-.takelist-item-card {
-  @apply flex items-center gap-3 p-3 bg-white/50 dark:bg-slate-800/50 rounded-xl border border-white/20 cursor-pointer transition-all duration-300 hover:bg-white dark:hover:bg-slate-700 hover:translate-x-1 shadow-sm;
+.packing-item.is-checked .packing-checkbox {
+  border-color: transparent;
+  background: var(--gradient-primary);
 }
 
-.takelist-item-text {
-  @apply font-bold text-slate-800 dark:text-slate-200 transition-all duration-300;
+.packing-item.is-checked .packing-item__toggle > span:nth-child(2) {
+  color: var(--color-faint);
+  text-decoration: line-through;
 }
 
-.takelist-category-complete-badge {
-  @apply w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-scale-in;
+.packing-item__delete {
+  width: 3.25rem;
+  flex: 0 0 auto;
+  border-left: 1px solid var(--color-line);
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: 1.2rem;
+}
+
+.empty-state {
+  min-height: 15rem;
+  flex-direction: column;
+}
+
+.empty-state > span {
+  color: var(--color-secondary);
+  font-size: 2rem;
+}
+
+.empty-state p {
+  margin: -0.5rem 0 0;
+  color: var(--color-muted);
+}
+
+@media (max-width: 960px) {
+  .packing-onboarding,
+  .packing-dashboard,
+  .packing-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .packing-onboarding {
+    min-height: auto;
+  }
+
+  .packing-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .packing-header__actions {
+    justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .country-grid,
+  .gender-actions,
+  .packing-items {
+    grid-template-columns: 1fr;
+  }
+
+  .packing-onboarding__copy h1 {
+    font-size: 3rem;
+  }
+
+  .packing-header__actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .packing-header__actions .primary-button {
+    grid-column: 1 / 3;
+  }
+
+  .progress-panel,
+  .weather-panel {
+    padding: var(--space-4);
+  }
+
+  .category-tabs {
+    margin-right: -0.625rem;
+    padding-right: 0.625rem;
+  }
 }

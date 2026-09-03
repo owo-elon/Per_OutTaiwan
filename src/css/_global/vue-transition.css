@@ -1,0 +1,43 @@
+.dialog-enter-active,
+.dialog-leave-active,
+.toast-enter-active,
+.toast-leave-active,
+.category-reveal-enter-active,
+.category-reveal-leave-active {
+  transition:
+    opacity var(--motion-normal) var(--ease-out),
+    transform var(--motion-normal) var(--ease-out);
+}
+
+.dialog-enter-from,
+.dialog-leave-to {
+  opacity: 0;
+}
+
+.dialog-enter-from .app-dialog,
+.dialog-leave-to .app-dialog {
+  transform: translateY(1.25rem) scale(0.97);
+}
+
+.toast-enter-from,
+.toast-leave-to {
+  opacity: 0;
+  transform: translate(-50%, 1rem);
+}
+
+.category-reveal-enter-from,
+.category-reveal-leave-to {
+  opacity: 0;
+  transform: translateY(-0.4rem);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

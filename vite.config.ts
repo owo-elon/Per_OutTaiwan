@@ -1,13 +1,12 @@
 import tailwindcss from '@tailwindcss/vite';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { defineConfig, loadEnv } from 'vite';
+import { defineConfig } from 'vite';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, '.', '');
+export default defineConfig(() => {
   const repoName = process.env.GITHUB_REPOSITORY ? process.env.GITHUB_REPOSITORY.split('/')[1] : '';
   const basePath = repoName ? `/${repoName}/` : '/';
 
@@ -15,16 +14,25 @@ export default defineConfig(({ mode }) => {
     base: basePath,
     plugins: [tailwindcss()],
     define: {
-      'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
       __VUE_OPTIONS_API__: true,
       __VUE_PROD_DEVTOOLS__: false,
       __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
     },
     resolve: {
-      alias: {
-        'vue': 'vue/dist/vue.esm-bundler.js',
-        '@': path.resolve(__dirname, './'),
-      },
+      alias: [
+        {
+          find: /^vue$/,
+          replacement: 'vue/dist/vue.esm-bundler.js',
+        },
+        {
+          find: /^three$/,
+          replacement: path.resolve(__dirname, 'node_modules/three/src/Three.js'),
+        },
+        {
+          find: '@',
+          replacement: path.resolve(__dirname, 'src'),
+        },
+      ],
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',
@@ -40,8 +48,8 @@ export default defineConfig(({ mode }) => {
         output: {
           manualChunks(id) {
             if (id.includes('node_modules')) {
-              if (id.includes('three')) return 'three';
-              if (id.includes('primevue') || id.includes('vue')) return 'vue-vendor';
+              if (id.includes('/node_modules/three/')) return 'three';
+              if (/\/node_modules\/(@vue|vue)\//.test(id)) return 'vue-vendor';
               return 'vendor';
             }
           }

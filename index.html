@@ -4,7 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Home :)</title>
+    <meta name="theme-color" content="#050816">
+    <meta name="description" content="Per OutTaiwan 旅行工具控制台">
+    <title>Per OutTaiwan｜旅行任務控制台</title>
+    <script>
+      try {
+        const savedTheme = localStorage.getItem('darkMode');
+        const isDark = savedTheme === null
+          ? window.matchMedia('(prefers-color-scheme: dark)').matches
+          : savedTheme === 'true';
+        document.documentElement.classList.toggle('dark', isDark);
+      } catch (error) {
+        console.warn('Unable to restore the saved color theme.', error);
+      }
+    </script>
 </head>
 
 <body>

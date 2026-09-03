@@ -2,17 +2,17 @@ export const routes = [
   {
     path: '/',
     name: 'Home',
-    component: '/src/view/home/home.html',
+    component: '/index.html',
     category: 'all'
   },
   {
-    path: '/takelist',
+    path: '/src/view/takelist/takelist.html',
     name: 'PackingList',
     component: '/src/view/takelist/takelist.html',
     category: 'tool'
   },
   {
-    path: '/turntable',
+    path: '/src/view/turntable/turntable.html',
     name: 'Turntable',
     component: '/src/view/turntable/turntable.html',
     category: 'game'

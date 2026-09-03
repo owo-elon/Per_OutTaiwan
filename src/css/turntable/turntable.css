@@ -1,169 +1,386 @@
-@reference "../_global/index.css";
-
-.turntable-main-wrapper {
-  @apply max-w-6xl mx-auto px-4 py-8 relative;
+.turntable-page {
+  display: grid;
+  gap: var(--space-8);
 }
 
-.turntable-layout-container {
-  @apply flex flex-col lg:flex-row gap-8 transition-all duration-700 ease-in-out;
+.turntable-header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-6);
 }
 
-.turntable-wheel-section {
-  @apply flex-1 w-full flex flex-col items-center;
+.turntable-header h1 {
+  margin: 0;
+  font-size: clamp(2.7rem, 7vw, 6.5rem);
+  font-weight: 850;
+  letter-spacing: -0.065em;
+  line-height: 0.95;
 }
 
-.turntable-container {
-  @apply relative w-full max-w-[500px] mx-auto filter drop-shadow-[0_20px_50px_rgba(0,0,0,0.15)] dark:drop-shadow-[0_0_30px_rgba(96,165,250,0.2)];
+.turntable-header p:not(.eyebrow) {
+  max-width: 44rem;
+  margin: var(--space-5) 0 0;
+  color: var(--color-muted);
+  line-height: 1.75;
 }
 
-.turntable-pointer {
-  @apply absolute -top-2.5 left-1/2 -translate-x-1/2 w-10 h-[50px] bg-rose-500 z-10 filter drop-shadow-[0_4px_6px_rgba(0,0,0,0.2)];
-  clip-path: polygon(50% 100%, 0 0, 100% 0);
+.turntable-workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  transition: grid-template-columns var(--motion-normal) var(--ease-out);
 }
 
-.turntable-pointer::after {
-  content: '';
-  @apply absolute top-0 left-1/2 -translate-x-1/2 border-l-[20px] border-l-transparent border-r-[20px] border-r-transparent border-t-[40px] border-t-red-500;
+.turntable-workspace.is-panel-open {
+  grid-template-columns: minmax(31rem, 1fr) minmax(20rem, 25rem);
 }
 
-.turntable-spin-btn {
-  @apply absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-20 h-20 rounded-full flex items-center justify-center text-white font-black text-2xl shadow-2xl transition-all duration-300 z-20 border-4 border-white/20;
+.wheel-zone {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: min(67dvh, 48rem);
+  place-items: center;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-xl);
+  padding: clamp(2rem, 5vw, 4rem);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.16), transparent 48%),
+    var(--color-panel);
+  box-shadow: var(--shadow-panel);
+  overflow: hidden;
 }
 
-.turntable-spin-btn-active {
-  @apply bg-emerald-500 scale-95 shadow-[0_0_30px_rgba(16,185,129,0.5)];
+.wheel-zone::before {
+  position: absolute;
+  width: min(78%, 42rem);
+  aspect-ratio: 1;
+  border: 1px solid var(--color-line);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 2rem rgba(99, 102, 241, 0.025),
+    0 0 0 4rem rgba(34, 211, 238, 0.018);
+  content: "";
+  pointer-events: none;
 }
 
-.turntable-spin-btn-braking {
-  @apply bg-amber-500 cursor-not-allowed shadow-[0_0_30px_rgba(245,158,11,0.5)];
+.wheel-frame {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(76vw, 35rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid var(--color-line-strong);
+  border-radius: 50%;
+  padding: clamp(0.45rem, 1.5vw, 0.8rem);
+  background: color-mix(in srgb, var(--color-panel-strong) 88%, transparent);
+  box-shadow:
+    0 0 0 0.45rem color-mix(in srgb, var(--color-line) 55%, transparent),
+    var(--shadow-glow);
 }
 
-.turntable-spin-btn-ready {
-  @apply bg-indigo-600 hover:bg-indigo-500 hover:scale-110 hover:shadow-[0_0_40px_rgba(79,70,229,0.6)];
+.wheel-frame canvas {
+  display: block;
+  max-width: 100%;
+  border-radius: 50%;
+  filter: drop-shadow(0 22px 28px rgba(15, 23, 42, 0.28));
 }
 
-/* 統一設定按鈕位置於右下角（避開系統選單） */
-.turntable-settings-toggle-container {
-  @apply fixed bottom-4 right-24 z-[110];
+.wheel-pointer {
+  position: absolute;
+  z-index: 4;
+  top: -0.65rem;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform: translateX(-50%);
+  border-right: 1.1rem solid transparent;
+  border-left: 1.1rem solid transparent;
+  border-top: 2.4rem solid var(--color-text);
+  filter: drop-shadow(0 0 10px var(--color-secondary));
 }
 
-.turntable-settings-toggle {
-  @apply w-16 h-16 rounded-full shadow-2xl flex items-center justify-center hover:scale-110 active:scale-95 transition-all border-4 relative overflow-hidden bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-400/40 text-slate-900 dark:text-slate-300 shadow-slate-200/50 dark:shadow-[0_0_20px_rgba(148,163,184,0.3)];
+.wheel-trigger {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  width: clamp(4.6rem, 12vw, 6.2rem);
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: 50%;
+  background: var(--gradient-primary);
+  box-shadow: 0 0 0 0.4rem rgba(255, 255, 255, 0.15), var(--shadow-glow);
+  color: #ffffff;
+  cursor: pointer;
+  font-size: clamp(0.72rem, 2vw, 0.9rem);
+  font-weight: 900;
+  letter-spacing: 0.12em;
 }
 
-.turntable-announcement {
-  @apply max-w-5xl mx-auto mt-4 py-3 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border-l-4 border-indigo-600 dark:border-indigo-400 rounded-r-2xl flex items-center overflow-hidden shadow-xl animate-fade-in pointer-events-auto;
+.brake-button {
+  position: absolute;
+  z-index: 5;
+  bottom: 2rem;
+  min-height: 2.8rem;
+  border: 1px solid color-mix(in srgb, var(--color-warning) 60%, transparent);
+  border-radius: 999px;
+  padding: 0.55rem 1.1rem;
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--color-panel-strong));
+  color: var(--color-warning);
+  cursor: pointer;
+  font-weight: 800;
 }
 
-.turntable-settings-modal-overlay {
-  @apply fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm;
+.wheel-instruction {
+  position: absolute;
+  z-index: 2;
+  right: 1rem;
+  bottom: 0.75rem;
+  left: 1rem;
+  margin: 0;
+  color: var(--color-faint);
+  font-size: 0.68rem;
+  text-align: center;
 }
 
-.turntable-settings-panel {
-  @apply w-full max-w-lg glass-card rounded-[2rem] p-8 shadow-2xl flex flex-col max-h-[90vh] border border-white/20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl relative animate-scale-in;
+.wheel-readout {
+  position: absolute;
+  z-index: 2;
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-faint);
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
 }
 
-.turntable-settings-header {
-  @apply flex justify-between items-center mb-6;
+.wheel-readout strong {
+  color: var(--color-secondary);
+  font-size: 1.15rem;
 }
 
-.turntable-settings-title {
-  @apply text-2xl font-black text-slate-900 dark:text-white;
+.wheel-readout--top {
+  top: 1.25rem;
+  left: 1.5rem;
 }
 
-.turntable-settings-close {
-  @apply p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 transition-colors;
+.wheel-readout--bottom {
+  right: 1.5rem;
+  bottom: 1.25rem;
+  text-align: right;
 }
 
-.turntable-input-label {
-  @apply block text-sm font-bold text-slate-700 dark:text-slate-300 mb-2;
+.settings-hud {
+  align-self: start;
+  max-height: min(73dvh, 50rem);
+  border: 1px solid var(--color-line-strong);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  overflow: auto;
+  background: var(--color-panel-strong);
+  box-shadow: var(--shadow-panel), var(--shadow-glow);
+  backdrop-filter: blur(20px);
 }
 
-.turntable-input {
-  @apply w-full py-3 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold;
+.settings-hud__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
 }
 
-.turntable-select {
-  @apply flex-1 py-3 px-4 rounded-xl bg-white/50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-slate-900 dark:text-white font-bold appearance-none cursor-pointer;
+.settings-hud h2 {
+  margin: 0;
+  font-size: 1.55rem;
 }
 
-.turntable-add-btn {
-  @apply px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-lg shadow-indigo-500/30 active:scale-95;
+.prize-form {
+  display: grid;
+  gap: var(--space-4);
+  margin: var(--space-6) 0;
+  border-bottom: 1px solid var(--color-line);
+  padding-bottom: var(--space-6);
 }
 
-.turntable-prize-list-header {
-  @apply flex justify-between items-center mb-4;
+.prize-form label {
+  display: grid;
+  gap: var(--space-2);
+  color: var(--color-muted);
+  font-size: 0.76rem;
+  font-weight: 750;
 }
 
-.turntable-prize-list-title {
-  @apply text-sm font-bold text-slate-700 dark:text-slate-300;
+.prize-list {
+  display: grid;
+  gap: var(--space-2);
 }
 
-.turntable-reset-btn {
-  @apply text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold;
+.prize-item {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  padding: 0.65rem;
+  background: var(--color-panel);
 }
 
-.turntable-prize-item {
-  @apply flex items-center justify-between p-3 bg-white/40 dark:bg-slate-800/40 rounded-xl border border-white/30 dark:border-white/5 transition-all hover:bg-white/80 dark:hover:bg-slate-700/80;
+.prize-item > i {
+  width: 0.8rem;
+  height: 2.2rem;
+  border-radius: 999px;
+  box-shadow: 0 0 12px currentColor;
 }
 
-.turntable-prize-item-level-1 { @apply border-yellow-300/50 dark:border-yellow-500/30 bg-yellow-50/30 dark:bg-yellow-900/10; }
-.turntable-prize-item-level-2 { @apply border-slate-300/50 dark:border-slate-500/30 bg-slate-50/30 dark:bg-slate-800/30; }
-.turntable-prize-item-level-3 { @apply border-orange-300/50 dark:border-orange-500/30 bg-orange-50/30 dark:bg-orange-900/10; }
-.turntable-prize-item-level-0 { @apply border-white/30 dark:border-white/5; }
-
-.turntable-prize-color-swatch {
-  @apply w-4 h-4 rounded-full shadow-sm border border-black/10 dark:border-white/10;
+.prize-item strong,
+.prize-item small {
+  display: block;
 }
 
-.turntable-prize-text {
-  @apply font-bold text-slate-900 dark:text-white;
+.prize-item strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.turntable-prize-text-level-1 { @apply text-yellow-600 dark:text-yellow-400; }
-.turntable-prize-text-normal { @apply text-slate-900 dark:text-white; }
-
-.turntable-prize-badge {
-  @apply text-[10px] px-2 py-0.5 rounded-full mt-1 w-fit font-bold;
+.prize-item small {
+  margin-top: 0.2rem;
+  color: var(--color-faint);
+  font-size: 0.64rem;
 }
 
-.turntable-prize-badge-level-1 { @apply bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400; }
-.turntable-prize-badge-level-2 { @apply bg-slate-200 text-slate-700 dark:bg-slate-700 dark:text-slate-300; }
-.turntable-prize-badge-level-3 { @apply bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400; }
-
-.turntable-prize-delete-btn {
-  @apply text-slate-400 hover:text-red-500 transition-colors p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 opacity-0 group-hover:opacity-100;
+.prize-item button {
+  display: grid;
+  width: 2.35rem;
+  height: 2.35rem;
+  place-items: center;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+  color: var(--color-danger);
+  cursor: pointer;
+  font-size: 1.1rem;
 }
 
-.turntable-modal-overlay {
-  @apply fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm;
+.settings-reset {
+  width: 100%;
+  margin-top: var(--space-5);
 }
 
-.turntable-modal-content {
-  @apply glass-card p-8 rounded-3xl shadow-2xl max-w-sm w-full relative z-10 animate-scale-in border border-white/20 bg-white/90 dark:bg-slate-900/90;
+.result-dialog {
+  overflow: hidden;
+  text-align: center;
 }
 
-.turntable-modal-icon {
-  @apply text-6xl mb-4 animate-bounce;
+.result-dialog::before {
+  position: absolute;
+  inset: -50%;
+  background: conic-gradient(
+    transparent,
+    color-mix(in srgb, var(--color-secondary) 28%, transparent),
+    transparent 30%
+  );
+  content: "";
+  animation: result-orbit 7s linear infinite;
+  pointer-events: none;
 }
 
-.turntable-modal-title {
-  @apply text-2xl font-bold text-slate-900 dark:text-white mb-2;
+.result-dialog > * {
+  position: relative;
 }
 
-.turntable-modal-subtitle {
-  @apply text-lg font-bold mb-6;
+.result-dialog__icon {
+  display: block;
+  margin: var(--space-4) 0;
+  color: var(--color-secondary);
+  font-size: 3rem;
+  text-shadow: 0 0 24px currentColor;
 }
 
-.turntable-modal-close-btn {
-  @apply w-full py-3 rounded-2xl font-bold transition-all active:scale-95 text-white shadow-lg;
+.result-dialog h2 {
+  font-size: clamp(2.1rem, 8vw, 4.2rem);
 }
 
-.turntable-modal-close-btn-level-0 { @apply bg-indigo-600 hover:bg-indigo-500 shadow-indigo-500/30; }
-.turntable-modal-close-btn-level-1 { @apply bg-yellow-500 hover:bg-yellow-400 shadow-yellow-500/30 text-yellow-950; }
-.turntable-modal-close-btn-level-2 { @apply bg-slate-600 hover:bg-slate-500 shadow-slate-500/30; }
-.turntable-modal-close-btn-level-3 { @apply bg-orange-500 hover:bg-orange-400 shadow-orange-500/30; }
+.result-dialog--level-1 {
+  border-color: #fbbf24;
+}
 
-#turntableCanvas {
-  @apply w-full h-auto rounded-full shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-transform duration-100 ease-linear;
+.result-dialog--level-2 {
+  border-color: #cbd5e1;
+}
+
+.result-dialog--level-3 {
+  border-color: #fb923c;
+}
+
+@keyframes result-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1040px) {
+  .turntable-workspace.is-panel-open {
+    grid-template-columns: minmax(0, 1fr) minmax(18rem, 21rem);
+  }
+
+  .wheel-zone {
+    min-height: 38rem;
+  }
+}
+
+@media (max-width: 820px) {
+  .turntable-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .turntable-workspace,
+  .turntable-workspace.is-panel-open {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-hud {
+    position: fixed;
+    z-index: 80;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    max-height: min(76dvh, 48rem);
+    border-right: 0;
+    border-bottom: 0;
+    border-left: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding-bottom: calc(6.5rem + var(--safe-bottom));
+  }
+
+  .wheel-zone {
+    min-height: min(70dvh, 40rem);
+    padding: 2rem 1rem 4.5rem;
+  }
+
+  .wheel-frame {
+    width: min(86vw, 32rem);
+  }
+}
+
+@media (max-width: 520px) {
+  .turntable-header h1 {
+    font-size: 3.4rem;
+  }
+
+  .settings-toggle {
+    width: 100%;
+  }
+
+  .wheel-zone {
+    min-height: 31rem;
+  }
+
+  .wheel-readout {
+    display: none;
+  }
 }

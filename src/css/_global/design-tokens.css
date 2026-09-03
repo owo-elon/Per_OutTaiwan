@@ -1,0 +1,67 @@
+:root {
+  --font-sans: Inter, "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --color-bg: #eef2ff;
+  --color-bg-elevated: rgba(255, 255, 255, 0.82);
+  --color-bg-solid: #ffffff;
+  --color-panel: rgba(248, 250, 252, 0.76);
+  --color-panel-strong: rgba(255, 255, 255, 0.94);
+  --color-text: #0f172a;
+  --color-muted: #526078;
+  --color-faint: #718096;
+  --color-line: rgba(99, 102, 241, 0.2);
+  --color-line-strong: rgba(99, 102, 241, 0.45);
+  --color-primary: #6d28d9;
+  --color-primary-strong: #5b21b6;
+  --color-secondary: #0891b2;
+  --color-accent: #db2777;
+  --color-success: #059669;
+  --color-danger: #dc2626;
+  --color-warning: #d97706;
+  --color-focus: #06b6d4;
+  --gradient-primary: linear-gradient(135deg, #6d28d9, #2563eb 52%, #0891b2);
+  --gradient-panel: linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(238, 242, 255, 0.72));
+  --shadow-panel: 0 24px 70px rgba(49, 46, 129, 0.16);
+  --shadow-glow: 0 0 32px rgba(99, 102, 241, 0.28);
+  --radius-sm: 0.65rem;
+  --radius-md: 1rem;
+  --radius-lg: 1.5rem;
+  --radius-xl: 2rem;
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --motion-fast: 160ms;
+  --motion-normal: 280ms;
+  --motion-slow: 520ms;
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+:root.dark {
+  --color-bg: #050816;
+  --color-bg-elevated: rgba(8, 13, 32, 0.84);
+  --color-bg-solid: #0b1124;
+  --color-panel: rgba(12, 19, 43, 0.72);
+  --color-panel-strong: rgba(13, 21, 46, 0.94);
+  --color-text: #f8fafc;
+  --color-muted: #b3bfd3;
+  --color-faint: #8190aa;
+  --color-line: rgba(129, 140, 248, 0.24);
+  --color-line-strong: rgba(103, 232, 249, 0.5);
+  --color-primary: #a78bfa;
+  --color-primary-strong: #8b5cf6;
+  --color-secondary: #22d3ee;
+  --color-accent: #f472b6;
+  --color-success: #34d399;
+  --color-danger: #fb7185;
+  --color-warning: #fbbf24;
+  --gradient-primary: linear-gradient(135deg, #8b5cf6, #3b82f6 52%, #06b6d4);
+  --gradient-panel: linear-gradient(145deg, rgba(15, 23, 52, 0.9), rgba(8, 13, 32, 0.74));
+  --shadow-panel: 0 28px 90px rgba(0, 0, 0, 0.38);
+  --shadow-glow: 0 0 38px rgba(103, 232, 249, 0.18);
+}
