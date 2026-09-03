@@ -1,6 +1,7 @@
 import {
   AdditiveBlending,
   BufferGeometry,
+  CanvasTexture,
   Color,
   ConeGeometry,
   CylinderGeometry,
@@ -11,6 +12,7 @@ import {
   Mesh,
   MeshBasicMaterial,
   PerspectiveCamera,
+  PlaneGeometry,
   Points,
   PointsMaterial,
   Scene,
@@ -18,7 +20,8 @@ import {
   TorusGeometry,
   WebGLRenderer,
   type Material,
-  type Object3D
+  type Object3D,
+  type Texture
 } from 'three';
 import type { ThreeBackgroundController } from '../../types/app';
 
@@ -90,8 +93,34 @@ function disposeObject(object: Object3D) {
 
     child.geometry.dispose();
     const materials = Array.isArray(child.material) ? child.material : [child.material];
-    materials.forEach((material: Material) => material.dispose());
+    materials.forEach((material: Material) => {
+      const mappedMaterial = material as Material & { map?: Texture | null };
+      mappedMaterial.map?.dispose();
+      material.dispose();
+    });
   });
+}
+
+function createGlowTexture(
+  innerColor: string,
+  middleColor: string,
+  outerColor: string
+) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 256;
+  const context = canvas.getContext('2d');
+  if (!context) {
+    throw new Error('Canvas 2D context is not available.');
+  }
+
+  const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gradient.addColorStop(0, innerColor);
+  gradient.addColorStop(0.28, middleColor);
+  gradient.addColorStop(1, outerColor);
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  return new CanvasTexture(canvas);
 }
 
 function createBird(palette: ThemePalette) {
@@ -152,17 +181,31 @@ function createUfo(palette: ThemePalette) {
 }
 
 function createCelestialSystem(isDark: boolean) {
-  const radius = window.innerWidth < 768 ? 7.5 : 10;
-  const bodyRadius = window.innerWidth < 768 ? 1.45 : 2.1;
+  const isMobile = window.innerWidth < 768;
+  const sunHorizontalRadius = isMobile ? 5.2 : 16;
+  const moonHorizontalRadius = isMobile ? 5.5 : 18;
+  const bodyRadius = isMobile ? 1.45 : 2.1;
   const pivot = new Group();
-  pivot.position.set(
-    window.innerWidth < 768 ? 3.8 : 8.5,
-    -radius,
-    window.innerWidth < 768 ? -17 : -15
-  );
+  pivot.position.set(0, -12, isMobile ? -17 : -16);
 
   const sun = new Group();
-  sun.position.y = radius;
+  sun.position.set(-sunHorizontalRadius, 21, 0);
+  const sunGlowMaterial = new MeshBasicMaterial({
+    blending: AdditiveBlending,
+    depthWrite: false,
+    map: createGlowTexture(
+      'rgba(255, 255, 220, 0.92)',
+      'rgba(255, 190, 50, 0.42)',
+      'rgba(255, 140, 0, 0)'
+    ),
+    transparent: true,
+    opacity: 0.78
+  });
+  const sunGlow = new Mesh(
+    new PlaneGeometry(bodyRadius * 8.2, bodyRadius * 8.2),
+    sunGlowMaterial
+  );
+  sunGlow.position.z = -0.45;
   const sunCoreMaterial = new MeshBasicMaterial({
     color: 0xffb703,
     transparent: true,
@@ -204,19 +247,44 @@ function createCelestialSystem(isDark: boolean) {
     ray.rotation.z = angle - Math.PI / 2;
     sunRays.add(ray);
   }
-  sun.add(sunCore, sunHalo, sunRays);
+  sun.add(sunGlow, sunCore, sunHalo, sunRays);
 
   const moon = new Group();
-  moon.position.y = -radius;
-  const moonCoreMaterial = new MeshBasicMaterial({
-    color: 0xc4b5fd,
+  moon.position.set(-moonHorizontalRadius, -14, 0);
+  const moonGlowMaterial = new MeshBasicMaterial({
+    blending: AdditiveBlending,
+    depthWrite: false,
+    map: createGlowTexture(
+      'rgba(255, 255, 255, 0.88)',
+      'rgba(205, 228, 255, 0.52)',
+      'rgba(120, 175, 255, 0)'
+    ),
     transparent: true,
-    opacity: 0.62,
-    wireframe: true
+    opacity: 0.78
+  });
+  const moonGlow = new Mesh(
+    new PlaneGeometry(bodyRadius * 7.4, bodyRadius * 7.4),
+    moonGlowMaterial
+  );
+  moonGlow.position.z = -0.45;
+  const moonCoreMaterial = new MeshBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.9
   });
   const moonCore = new Mesh(
     new SphereGeometry(bodyRadius, 20, 20),
     moonCoreMaterial
+  );
+  const moonWireMaterial = new MeshBasicMaterial({
+    color: 0xbfdbfe,
+    transparent: true,
+    opacity: 0.42,
+    wireframe: true
+  });
+  const moonWire = new Mesh(
+    new SphereGeometry(bodyRadius * 1.035, 20, 20),
+    moonWireMaterial
   );
   const moonHaloMaterial = new MeshBasicMaterial({
     blending: AdditiveBlending,
@@ -231,7 +299,7 @@ function createCelestialSystem(isDark: boolean) {
   );
   moonHalo.rotation.x = 0.55;
   moonHalo.rotation.y = 0.25;
-  moon.add(moonCore, moonHalo);
+  moon.add(moonGlow, moonCore, moonWire, moonHalo);
 
   pivot.add(sun, moon);
   pivot.rotation.z = isDark ? Math.PI : 0;
@@ -242,11 +310,14 @@ function createCelestialSystem(isDark: boolean) {
     pivot,
     sun,
     sunCoreMaterial,
+    sunGlowMaterial,
     sunHaloMaterial,
     sunRays,
     moon,
     moonCoreMaterial,
-    moonHaloMaterial
+    moonGlowMaterial,
+    moonHaloMaterial,
+    moonWireMaterial
   };
 }
 
@@ -479,9 +550,12 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
       creature.ufoDomeMaterial.color.setHex(palette.ufoDome);
     });
     celestial.sunCoreMaterial.opacity = isDark ? 0.48 : 0.72;
+    celestial.sunGlowMaterial.opacity = isDark ? 0.34 : 0.78;
     celestial.sunHaloMaterial.opacity = isDark ? 0.24 : 0.42;
-    celestial.moonCoreMaterial.opacity = isDark ? 0.72 : 0.45;
-    celestial.moonHaloMaterial.opacity = isDark ? 0.46 : 0.25;
+    celestial.moonCoreMaterial.opacity = isDark ? 0.92 : 0.45;
+    celestial.moonGlowMaterial.opacity = isDark ? 0.96 : 0.28;
+    celestial.moonHaloMaterial.opacity = isDark ? 0.55 : 0.25;
+    celestial.moonWireMaterial.opacity = isDark ? 0.58 : 0.24;
   };
 
   const setSpeed = (multiplier: number, duration = 450) => {
