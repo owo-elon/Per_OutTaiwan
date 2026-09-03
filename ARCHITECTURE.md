@@ -2,7 +2,7 @@
 
 ## Overview
 
-Per OutTaiwan 使用 Vite multi-page application（MPA）模式。每個頁面擁有獨立 entry，但共用同一套 Layout、設計 token、資料服務與 Three.js 背景。
+Per OutTaiwan 是可持續擴充不同工具的 Vite multi-page application（MPA）。每個工具頁擁有獨立 entry，但共用同一套 Layout、設計 token、資料服務與 Three.js 背景。
 
 ```text
 index.html

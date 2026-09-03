@@ -59,10 +59,10 @@ const HomeApp = defineComponent({
       <section class="home-dashboard">
         <div class="home-hero">
           <div class="home-hero__copy">
-            <p class="eyebrow">MISSION CONTROL / TAIWAN OUTBOUND</p>
-            <h1>把旅行雜事，<span>變成可執行的任務。</span></h1>
+            <p class="eyebrow">MULTI-TOOL CONTROL / SYSTEM ONLINE</p>
+            <h1>把各種需求，<span>變成好用的工具。</span></h1>
             <p class="home-hero__lead">
-              從打包、抽選到下一段旅程，所有工具都在同一個快速、清楚且跨裝置的控制台。
+              從清單、抽選到更多日常功能，所有模組都集中在同一個快速、清楚且跨裝置的工具控制台。
             </p>
           </div>
 

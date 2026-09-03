@@ -14,6 +14,7 @@ import {
   Points,
   PointsMaterial,
   Scene,
+  SphereGeometry,
   TorusGeometry,
   WebGLRenderer,
   type Material,
@@ -150,6 +151,105 @@ function createUfo(palette: ThemePalette) {
   };
 }
 
+function createCelestialSystem(isDark: boolean) {
+  const radius = window.innerWidth < 768 ? 7.5 : 10;
+  const bodyRadius = window.innerWidth < 768 ? 1.45 : 2.1;
+  const pivot = new Group();
+  pivot.position.set(
+    window.innerWidth < 768 ? 3.8 : 8.5,
+    -radius,
+    window.innerWidth < 768 ? -17 : -15
+  );
+
+  const sun = new Group();
+  sun.position.y = radius;
+  const sunCoreMaterial = new MeshBasicMaterial({
+    color: 0xffb703,
+    transparent: true,
+    opacity: 0.72
+  });
+  const sunCore = new Mesh(new SphereGeometry(bodyRadius, 24, 24), sunCoreMaterial);
+  const sunHaloMaterial = new MeshBasicMaterial({
+    blending: AdditiveBlending,
+    color: 0xffd166,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.42
+  });
+  const sunHalo = new Mesh(
+    new TorusGeometry(bodyRadius * 1.42, bodyRadius * 0.08, 8, 64),
+    sunHaloMaterial
+  );
+  const sunRays = new Group();
+  const rayMaterial = new MeshBasicMaterial({
+    blending: AdditiveBlending,
+    color: 0xffc300,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.34,
+    wireframe: true
+  });
+  const rayCount = window.innerWidth < 768 ? 8 : 12;
+  for (let index = 0; index < rayCount; index += 1) {
+    const angle = (index / rayCount) * Math.PI * 2;
+    const ray = new Mesh(
+      new ConeGeometry(bodyRadius * 0.18, bodyRadius * 0.68, 3),
+      rayMaterial
+    );
+    ray.position.set(
+      Math.cos(angle) * bodyRadius * 1.75,
+      Math.sin(angle) * bodyRadius * 1.75,
+      0
+    );
+    ray.rotation.z = angle - Math.PI / 2;
+    sunRays.add(ray);
+  }
+  sun.add(sunCore, sunHalo, sunRays);
+
+  const moon = new Group();
+  moon.position.y = -radius;
+  const moonCoreMaterial = new MeshBasicMaterial({
+    color: 0xc4b5fd,
+    transparent: true,
+    opacity: 0.62,
+    wireframe: true
+  });
+  const moonCore = new Mesh(
+    new SphereGeometry(bodyRadius, 20, 20),
+    moonCoreMaterial
+  );
+  const moonHaloMaterial = new MeshBasicMaterial({
+    blending: AdditiveBlending,
+    color: 0x67e8f9,
+    depthWrite: false,
+    transparent: true,
+    opacity: 0.32
+  });
+  const moonHalo = new Mesh(
+    new TorusGeometry(bodyRadius * 1.45, bodyRadius * 0.055, 8, 64),
+    moonHaloMaterial
+  );
+  moonHalo.rotation.x = 0.55;
+  moonHalo.rotation.y = 0.25;
+  moon.add(moonCore, moonHalo);
+
+  pivot.add(sun, moon);
+  pivot.rotation.z = isDark ? Math.PI : 0;
+  sun.rotation.z = -pivot.rotation.z;
+  moon.rotation.z = -pivot.rotation.z;
+
+  return {
+    pivot,
+    sun,
+    sunCoreMaterial,
+    sunHaloMaterial,
+    sunRays,
+    moon,
+    moonCoreMaterial,
+    moonHaloMaterial
+  };
+}
+
 export function initThreeBackground(container: HTMLElement): ThreeBackgroundController | null {
   if (!supportsWebGl()) {
     container.classList.add('three-background-fallback');
@@ -231,6 +331,9 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
   shapes[2].rotation.set(Math.PI / 2.1, Math.PI / 4, 0);
   shapes.forEach((shape) => geometryGroup.add(shape));
 
+  const celestial = createCelestialSystem(isInitiallyDark);
+  scene.add(celestial.pivot);
+
   const creaturesGroup = new Group();
   scene.add(creaturesGroup);
   const creatureCount = window.innerWidth < 768 ? 2 : 4;
@@ -273,6 +376,8 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
   let currentSpeed = 1;
   let targetSpeed = 1;
   let speedTransitionEnd = 0;
+  let currentThemeDark = isInitiallyDark;
+  let targetCelestialRotation = celestial.pivot.rotation.z;
   let previousTime = performance.now();
 
   const resize = () => {
@@ -298,10 +403,25 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
     const easing = speedTransitionEnd > time ? 0.06 : 0.14;
     currentSpeed += (targetSpeed - currentSpeed) * easing;
 
+    if (reducedMotion.matches) {
+      celestial.pivot.rotation.z = targetCelestialRotation;
+    } else {
+      celestial.pivot.rotation.z += (
+        targetCelestialRotation - celestial.pivot.rotation.z
+      ) * Math.min(1, delta * 3.4);
+    }
+    celestial.sun.rotation.z = -celestial.pivot.rotation.z;
+    celestial.moon.rotation.z = -celestial.pivot.rotation.z;
+
     if (!document.hidden && !reducedMotion.matches) {
       geometryGroup.rotation.y += delta * 0.055 * currentSpeed;
       geometryGroup.rotation.x += delta * 0.018 * currentSpeed;
       stars.rotation.y -= delta * 0.006 * currentSpeed;
+      celestial.sun.rotation.y += delta * 0.22;
+      celestial.sunRays.rotation.z -= delta * 0.16;
+      celestial.moon.rotation.y -= delta * 0.08;
+      const sunPulse = 1 + Math.sin(time * 0.0018) * 0.035;
+      celestial.sun.scale.setScalar(sunPulse);
       creatures.forEach((creature) => {
         creature.angle += delta * creature.speed * currentSpeed;
         creature.wrapper.position.set(
@@ -331,6 +451,11 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
   };
 
   const updateTheme = (isDark: boolean) => {
+    if (isDark !== currentThemeDark) {
+      currentThemeDark = isDark;
+      targetCelestialRotation += Math.PI;
+    }
+
     const palette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
     scene.background = new Color(palette.background);
     if (scene.fog instanceof FogExp2) {
@@ -353,6 +478,10 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
       creature.ufoDiscMaterial.color.setHex(palette.ufo);
       creature.ufoDomeMaterial.color.setHex(palette.ufoDome);
     });
+    celestial.sunCoreMaterial.opacity = isDark ? 0.48 : 0.72;
+    celestial.sunHaloMaterial.opacity = isDark ? 0.24 : 0.42;
+    celestial.moonCoreMaterial.opacity = isDark ? 0.72 : 0.45;
+    celestial.moonHaloMaterial.opacity = isDark ? 0.46 : 0.25;
   };
 
   const setSpeed = (multiplier: number, duration = 450) => {
@@ -391,6 +520,7 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
     window.removeEventListener('pointermove', handlePointerMove);
     disposeObject(stars);
     disposeObject(geometryGroup);
+    disposeObject(celestial.pivot);
     disposeObject(creaturesGroup);
     renderer.dispose();
     renderer.domElement.remove();

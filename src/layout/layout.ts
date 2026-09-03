@@ -85,7 +85,7 @@ export const LayoutComponent = defineComponent({
           <span class="brand__mark">P</span>
           <span>
             <strong>PER OUTTAIWAN</strong>
-            <small>TRAVEL CONTROL SYSTEM</small>
+            <small>MULTI-TOOL CONTROL SYSTEM</small>
           </span>
         </a>
 

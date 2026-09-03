@@ -1,6 +1,6 @@
 # Per OutTaiwan
 
-Per OutTaiwan 是以 Vue 3、Vite、Tailwind CSS 4 與 Three.js 建立的多頁旅行工具站。現在包含首頁任務控制台、可保存進度的旅行打包清單，以及可自訂獎項的命運轉盤。
+Per OutTaiwan 是以 Vue 3、Vite、Tailwind CSS 4 與 Three.js 建立的多頁工具集合。首頁作為統一控制台，目前包含可保存進度的旅行打包清單與可自訂獎項的命運轉盤，並可持續加入不同類型的實用工具。
 
 ## 開發
 
