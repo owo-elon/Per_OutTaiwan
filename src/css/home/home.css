@@ -119,40 +119,29 @@
 
 .carousel-shell {
   position: relative;
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-xl);
-  background:
-    radial-gradient(circle at 50% 40%, rgba(99, 102, 241, 0.16), transparent 42%),
-    var(--color-panel);
-  box-shadow: var(--shadow-panel);
-  overflow: hidden;
-}
-
-.carousel-shell::before,
-.carousel-shell::after {
-  position: absolute;
-  z-index: 1;
-  top: 50%;
-  width: 8rem;
-  height: 8rem;
-  border: 1px solid var(--color-line);
-  border-radius: 50%;
-  content: "";
-  opacity: 0.55;
-  pointer-events: none;
+  isolation: isolate;
+  overflow: visible;
 }
 
 .carousel-shell::before {
-  left: -5rem;
-}
-
-.carousel-shell::after {
-  right: -5rem;
+  position: absolute;
+  z-index: -1;
+  inset: 12% 18%;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--color-primary) 24%, transparent),
+    color-mix(in srgb, var(--color-secondary) 10%, transparent) 42%,
+    transparent 72%
+  );
+  filter: blur(34px);
+  content: "";
+  pointer-events: none;
 }
 
 .home-carousel-stage {
   width: 100%;
-  height: clamp(24rem, 52vw, 37rem);
+  height: clamp(29rem, 49vw, 38rem);
   cursor: grab;
   touch-action: pan-y;
 }
@@ -165,6 +154,9 @@
   display: block;
   width: 100%;
   height: 100%;
+  filter:
+    drop-shadow(0 28px 24px rgba(15, 23, 42, 0.28))
+    drop-shadow(0 0 28px color-mix(in srgb, var(--color-primary) 24%, transparent));
 }
 
 .carousel-control {
@@ -185,11 +177,11 @@
 }
 
 .carousel-control--previous {
-  left: var(--space-5);
+  left: 0;
 }
 
 .carousel-control--next {
-  right: var(--space-5);
+  right: 0;
 }
 
 .carousel-hint {
@@ -314,7 +306,7 @@ button.module-shortcut {
   }
 
   .home-carousel-stage {
-    height: 27rem;
+    height: 30rem;
   }
 
   .carousel-control {

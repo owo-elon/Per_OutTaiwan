@@ -107,9 +107,9 @@ export class ThreeCarousel {
       return;
     }
 
-    const radius = this.items.length <= 2 ? 3.2 : 4.7;
+    const radius = this.items.length <= 2 ? 4.6 : 6.4;
     this.group.position.z = -radius;
-    const cardGeometry = new PlaneGeometry(3.25, 4.05);
+    const cardGeometry = new PlaneGeometry(4.8, 6);
     this.cards = this.items.map((item, index) => {
       const material = new MeshBasicMaterial({
         map: createCardTexture(item),
@@ -140,6 +140,7 @@ export class ThreeCarousel {
   private resize() {
     const width = Math.max(1, this.container.clientWidth);
     const height = Math.max(1, this.container.clientHeight);
+    this.camera.position.z = width < 640 ? 10.5 : 12;
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height, false);
@@ -242,13 +243,19 @@ export class ThreeCarousel {
 
     this.currentRotation += (this.targetRotation - this.currentRotation) * 0.08;
     this.group.rotation.y = this.currentRotation;
+    const time = performance.now() * 0.001;
     this.cards.forEach((card, index) => {
       const distance = Math.min(
         Math.abs(index - this.activeIndex),
         this.items.length - Math.abs(index - this.activeIndex)
       );
-      const targetOpacity = distance === 0 ? 1 : distance === 1 ? 0.55 : 0.24;
+      const isActive = distance === 0;
+      const targetOpacity = isActive ? 1 : distance === 1 ? 0.62 : 0.28;
+      const targetScale = isActive ? 1.08 : distance === 1 ? 0.88 : 0.76;
       card.material.opacity += (targetOpacity - card.material.opacity) * 0.08;
+      card.scale.x += (targetScale - card.scale.x) * 0.08;
+      card.scale.y += (targetScale - card.scale.y) * 0.08;
+      card.position.y = Math.sin(time * 1.15 + index * 1.7) * (isActive ? 0.16 : 0.09);
     });
     this.renderer.render(this.scene, this.camera);
     this.animationFrameId = requestAnimationFrame(this.render);
