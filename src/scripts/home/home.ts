@@ -125,7 +125,6 @@ const HomeApp = defineComponent({
               aria-label="下一個功能"
               @click="nextFeature"
             >→</button>
-            <p class="carousel-hint">拖曳、水平滾動或使用方向按鈕切換；點擊中央卡片開啟。</p>
           </div>
 
           <div class="module-shortcuts" aria-label="功能快速連結">

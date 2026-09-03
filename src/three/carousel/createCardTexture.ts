@@ -1,6 +1,39 @@
 import { CanvasTexture, LinearFilter, sRGBEncoding } from 'three';
 import type { CarouselItem } from '../../types/home';
 
+interface CardPalette {
+  description: string;
+  gradient: [string, string, string];
+  planned: string;
+  ready: string;
+  scanLine: string;
+  shadow: string;
+  stroke: string;
+  title: string;
+}
+
+const LIGHT_PALETTE: CardPalette = {
+  description: '#475569',
+  gradient: ['#ffffff', '#eef2ff', '#cffafe'],
+  planned: '#64748b',
+  ready: '#0369a1',
+  scanLine: 'rgba(79, 70, 229, 0.07)',
+  shadow: 'rgba(49, 46, 129, 0.3)',
+  stroke: 'rgba(79, 70, 229, 0.58)',
+  title: '#172554'
+};
+
+const DARK_PALETTE: CardPalette = {
+  description: '#cbd5e1',
+  gradient: ['#312e81', '#0f172a', '#164e63'],
+  planned: '#94a3b8',
+  ready: '#67e8f9',
+  scanLine: 'rgba(255, 255, 255, 0.06)',
+  shadow: 'rgba(0, 0, 0, 0.72)',
+  stroke: 'rgba(165, 180, 252, 0.56)',
+  title: '#ffffff'
+};
+
 function wrapText(
   context: CanvasRenderingContext2D,
   text: string,
@@ -57,7 +90,7 @@ function addRoundedRectPath(
   context.closePath();
 }
 
-export function createCardTexture(item: CarouselItem) {
+export function createCardTexture(item: CarouselItem, isDark: boolean) {
   const canvas = document.createElement('canvas');
   canvas.width = 768;
   canvas.height = 960;
@@ -66,6 +99,7 @@ export function createCardTexture(item: CarouselItem) {
     throw new Error('Canvas 2D context is not available.');
   }
 
+  const palette = isDark ? DARK_PALETTE : LIGHT_PALETTE;
   const panel = {
     x: 46,
     y: 34,
@@ -79,12 +113,12 @@ export function createCardTexture(item: CarouselItem) {
     panel.x + panel.width,
     panel.y + panel.height
   );
-  gradient.addColorStop(0, '#312e81');
-  gradient.addColorStop(0.5, '#0f172a');
-  gradient.addColorStop(1, '#164e63');
+  gradient.addColorStop(0, palette.gradient[0]);
+  gradient.addColorStop(0.5, palette.gradient[1]);
+  gradient.addColorStop(1, palette.gradient[2]);
 
   context.save();
-  context.shadowColor = 'rgba(15, 23, 42, 0.72)';
+  context.shadowColor = palette.shadow;
   context.shadowBlur = 44;
   context.shadowOffsetY = 24;
   context.fillStyle = gradient;
@@ -99,7 +133,7 @@ export function createCardTexture(item: CarouselItem) {
   context.fill();
   context.restore();
 
-  context.strokeStyle = 'rgba(165, 180, 252, 0.56)';
+  context.strokeStyle = palette.stroke;
   context.lineWidth = 4;
   addRoundedRectPath(
     context,
@@ -121,7 +155,7 @@ export function createCardTexture(item: CarouselItem) {
     panel.radius
   );
   context.clip();
-  context.fillStyle = 'rgba(255, 255, 255, 0.06)';
+  context.fillStyle = palette.scanLine;
   for (let y = panel.y; y < panel.y + panel.height; y += 48) {
     context.fillRect(panel.x, y, panel.width, 1);
   }
@@ -132,18 +166,19 @@ export function createCardTexture(item: CarouselItem) {
   context.font = '138px "Segoe UI Emoji", sans-serif';
   context.fillText(item.icon, canvas.width / 2, 270);
 
+  context.fillStyle = palette.title;
   context.font = '700 64px "Noto Sans TC", sans-serif';
   wrapText(context, item.title, 620, 2).forEach((line, index) => {
     context.fillText(line, canvas.width / 2, 430 + index * 80);
   });
 
-  context.fillStyle = '#cbd5e1';
+  context.fillStyle = palette.description;
   context.font = '400 35px "Noto Sans TC", sans-serif';
   wrapText(context, item.description, 590, 4).forEach((line, index) => {
     context.fillText(line, canvas.width / 2, 610 + index * 51);
   });
 
-  context.fillStyle = item.link === '#' ? '#94a3b8' : '#67e8f9';
+  context.fillStyle = item.link === '#' ? palette.planned : palette.ready;
   context.font = '700 29px "Noto Sans TC", sans-serif';
   context.fillText(
     item.link === '#' ? 'MODULE PLANNED' : 'OPEN MODULE  →',

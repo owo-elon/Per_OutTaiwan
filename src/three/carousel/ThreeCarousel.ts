@@ -29,6 +29,7 @@ export class ThreeCarousel {
   private readonly raycaster = new Raycaster();
   private readonly pointer = new Vector2();
   private readonly resizeObserver: ResizeObserver;
+  private readonly themeObserver: MutationObserver;
   private cards: CarouselMesh[] = [];
   private animationFrameId: number | null = null;
   private activeIndex = 0;
@@ -38,6 +39,7 @@ export class ThreeCarousel {
   private draggedDistance = 0;
   private isDragging = false;
   private destroyed = false;
+  private isDark = document.documentElement.classList.contains('dark');
 
   constructor(
     private readonly container: HTMLElement,
@@ -60,6 +62,11 @@ export class ThreeCarousel {
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(this.container);
+    this.themeObserver = new MutationObserver(this.handleThemeChange);
+    this.themeObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    });
     this.bindEvents();
     this.resize();
     this.animationFrameId = requestAnimationFrame(this.render);
@@ -95,6 +102,7 @@ export class ThreeCarousel {
       cancelAnimationFrame(this.animationFrameId);
     }
     this.resizeObserver.disconnect();
+    this.themeObserver.disconnect();
     this.unbindEvents();
     this.disposeCards();
     this.renderer.dispose();
@@ -107,12 +115,12 @@ export class ThreeCarousel {
       return;
     }
 
-    const radius = this.items.length <= 2 ? 4.6 : 6.4;
+    const radius = this.items.length <= 2 ? 5.4 : 7.2;
     this.group.position.z = -radius;
-    const cardGeometry = new PlaneGeometry(4.8, 6);
+    const cardGeometry = new PlaneGeometry(5.8, 7.25);
     this.cards = this.items.map((item, index) => {
       const material = new MeshBasicMaterial({
-        map: createCardTexture(item),
+        map: createCardTexture(item, this.isDark),
         transparent: true,
         opacity: 1
       });
@@ -136,6 +144,21 @@ export class ThreeCarousel {
     });
     this.cards = [];
   }
+
+  private handleThemeChange = () => {
+    const isDark = document.documentElement.classList.contains('dark');
+    if (isDark === this.isDark) {
+      return;
+    }
+
+    this.isDark = isDark;
+    this.cards.forEach((card) => {
+      const previousTexture = card.material.map;
+      card.material.map = createCardTexture(card.userData.item, isDark);
+      card.material.needsUpdate = true;
+      previousTexture?.dispose();
+    });
+  };
 
   private resize() {
     const width = Math.max(1, this.container.clientWidth);
