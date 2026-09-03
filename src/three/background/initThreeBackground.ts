@@ -182,14 +182,12 @@ function createUfo(palette: ThemePalette) {
 
 function createCelestialSystem(isDark: boolean) {
   const isMobile = window.innerWidth < 768;
-  const sunHorizontalRadius = isMobile ? 5.2 : 16;
-  const moonHorizontalRadius = isMobile ? 5.5 : 18;
   const bodyRadius = isMobile ? 1.45 : 2.1;
+  const cameraDepth = 20;
   const pivot = new Group();
-  pivot.position.set(0, -12, isMobile ? -17 : -16);
+  pivot.position.z = -cameraDepth;
 
   const sun = new Group();
-  sun.position.set(-sunHorizontalRadius, 21, 0);
   const sunGlowMaterial = new MeshBasicMaterial({
     blending: AdditiveBlending,
     depthWrite: false,
@@ -250,7 +248,6 @@ function createCelestialSystem(isDark: boolean) {
   sun.add(sunGlow, sunCore, sunHalo, sunRays);
 
   const moon = new Group();
-  moon.position.set(-moonHorizontalRadius, -14, 0);
   const moonGlowMaterial = new MeshBasicMaterial({
     blending: AdditiveBlending,
     depthWrite: false,
@@ -306,6 +303,19 @@ function createCelestialSystem(isDark: boolean) {
   sun.rotation.z = -pivot.rotation.z;
   moon.rotation.z = -pivot.rotation.z;
 
+  const updateViewportLayout = (camera: PerspectiveCamera) => {
+    const halfHeight = Math.tan((camera.fov * Math.PI) / 360) * cameraDepth;
+    const halfWidth = halfHeight * camera.aspect;
+    const cornerInset = bodyRadius * 1.15;
+    const cornerX = Math.max(0, halfWidth - cornerInset);
+    const cornerY = Math.max(0, halfHeight - cornerInset);
+    const offscreenPivotY = -halfHeight - bodyRadius * 4.5;
+
+    pivot.position.y = offscreenPivotY;
+    sun.position.set(-cornerX, cornerY - offscreenPivotY, 0);
+    moon.position.set(-cornerX, offscreenPivotY - cornerY, 0);
+  };
+
   return {
     pivot,
     sun,
@@ -317,7 +327,8 @@ function createCelestialSystem(isDark: boolean) {
     moonCoreMaterial,
     moonGlowMaterial,
     moonHaloMaterial,
-    moonWireMaterial
+    moonWireMaterial,
+    updateViewportLayout
   };
 }
 
@@ -335,6 +346,7 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
 
   const camera = new PerspectiveCamera(58, 1, 0.1, 100);
   camera.position.set(0, 0, 16);
+  scene.add(camera);
 
   const renderer = new WebGLRenderer({
     antialias: window.devicePixelRatio <= 1.5,
@@ -403,7 +415,7 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
   shapes.forEach((shape) => geometryGroup.add(shape));
 
   const celestial = createCelestialSystem(isInitiallyDark);
-  scene.add(celestial.pivot);
+  camera.add(celestial.pivot);
 
   const creaturesGroup = new Group();
   scene.add(creaturesGroup);
@@ -456,6 +468,7 @@ export function initThreeBackground(container: HTMLElement): ThreeBackgroundCont
     const height = Math.max(1, container.clientHeight);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    celestial.updateViewportLayout(camera);
     renderer.setSize(width, height, false);
   };
 
