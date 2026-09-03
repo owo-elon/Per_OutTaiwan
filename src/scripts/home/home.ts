@@ -60,10 +60,6 @@ const HomeApp = defineComponent({
         <div class="home-hero">
           <div class="home-hero__copy">
             <p class="eyebrow">MULTI-TOOL CONTROL / SYSTEM ONLINE</p>
-            <h1>把各種需求，<span>變成好用的工具。</span></h1>
-            <p class="home-hero__lead">
-              從清單、抽選到更多日常功能，所有模組都集中在同一個快速、清楚且跨裝置的工具控制台。
-            </p>
           </div>
 
           <div class="mission-metrics" aria-label="系統摘要">
